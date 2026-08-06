@@ -12,7 +12,8 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             switch step {
             case 1: welcomeStep
-            default: platformsStep
+            case 2: platformsStep
+            default: videosStep
             }
         }
         .frame(width: 580)
@@ -163,6 +164,45 @@ struct OnboardingView: View {
             Button {
                 store.updateGoal(parsedGoal)
                 store.updateSubGoal(subGoal)
+                step = 3
+            } label: {
+                Label("Continue", systemImage: "arrow.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.bottom, 28)
+        }
+        .padding(28)
+    }
+
+    private var videosStep: some View {
+        VStack(spacing: 22) {
+            VStack(spacing: 6) {
+                Text("Videos to watch")
+                    .font(.title2.bold())
+                    .padding(.top, 32)
+                Text("Save YouTube, X and Instagram reels on a Trello-style board.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 10) {
+                videoRow(.holding, detail: "Queue — watch whenever")
+                videoRow(.urgent, detail: "Watch first, time-sensitive")
+                videoRow(.important, detail: "High value")
+                videoRow(.daily, detail: "Daily Watch")
+                videoRow(.weekly, detail: "Weekly Watch")
+                videoRow(.monthly, detail: "Monthly Watch")
+            }
+
+            Text("Cards are searchable, draggable between lists, and open the video in your browser.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Button {
+                store.updateGoal(parsedGoal)
+                store.updateSubGoal(subGoal)
                 store.finishOnboarding()
                 dismiss()
             } label: {
@@ -174,6 +214,26 @@ struct OnboardingView: View {
             .padding(.bottom, 28)
         }
         .padding(28)
+    }
+
+    private func videoRow(_ stage: VideoStage, detail: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: stage.symbol)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(stage.color)
+                .frame(width: 36, height: 36)
+                .background(stage.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(stage.displayName)
+                    .font(.subheadline.weight(.semibold))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func platformRow(_ platform: Platform, detail: String, focus: Bool = false) -> some View {

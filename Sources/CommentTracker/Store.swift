@@ -21,6 +21,10 @@ final class Store: ObservableObject {
     @Published var peopleComments: [PersonComment] = []
     @Published var personToDetail: Person?
 
+    @Published var videos: [Video] = []
+    @Published var videoComments: [VideoComment] = []
+    @Published var videoToDetail: Video?
+
     private var timer: Timer?
 
     init() {
@@ -54,6 +58,8 @@ final class Store: ObservableObject {
         people = loadPeople()
         peopleLinks = loadPersonLinks()
         peopleComments = loadPersonComments()
+        videos = loadVideos()
+        videoComments = loadVideoComments()
     }
 
     // MARK: - Onboarding
@@ -124,6 +130,25 @@ final class Store: ObservableObject {
         people
             .filter { $0.stage == stage }
             .sorted { $0.position < $1.position }
+    }
+
+    func person(_ p: Person, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if p.name.lowercased().contains(q) { return true }
+        if p.brief.lowercased().contains(q) { return true }
+        if p.description.lowercased().contains(q) { return true }
+        for link in peopleLinks where link.personId == p.id {
+            if link.label.lowercased().contains(q) || link.url.lowercased().contains(q) {
+                return true
+            }
+        }
+        for comment in peopleComments where comment.personId == p.id {
+            if comment.body.lowercased().contains(q) {
+                return true
+            }
+        }
+        return false
     }
 
     func personByID(_ id: Int) -> Person? {
@@ -216,6 +241,103 @@ final class Store: ObservableObject {
         _ = db.execute(
             "INSERT INTO people_comments (person_id, body, created_at) VALUES (?, ?, ?)",
             [personID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    // MARK: - Videos
+
+    var totalVideos: Int { videos.count }
+
+    func videosForStage(_ stage: VideoStage) -> [Video] {
+        videos
+            .filter { $0.stage == stage }
+            .sorted { $0.position < $1.position }
+    }
+
+    func videoByID(_ id: Int) -> Video? {
+        videos.first { $0.id == id }
+    }
+
+    func videoComments(for videoID: Int) -> [VideoComment] {
+        videoComments
+            .filter { $0.videoId == videoID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func video(_ v: Video, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if v.title.lowercased().contains(q) { return true }
+        if v.note.lowercased().contains(q) { return true }
+        if v.description.lowercased().contains(q) { return true }
+        if v.url.lowercased().contains(q) { return true }
+        for comment in videoComments where comment.videoId == v.id {
+            if comment.body.lowercased().contains(q) { return true }
+        }
+        return false
+    }
+
+    func addVideo(title: String, url: String, platform: VideoPlatform, stage: VideoStage = .holding) {
+        let now = Date().timeIntervalSince1970
+        let position = videosForStage(stage).count
+        _ = db.execute(
+            "INSERT INTO videos (title, note, description, platform, url, stage, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [title, "", "", platform.rawValue, url, stage.rawValue, position, now, now]
+        )
+        refresh()
+    }
+
+    func updateVideo(id: Int, title: String? = nil, note: String? = nil, description: String? = nil, url: String? = nil, platform: VideoPlatform? = nil, stage: VideoStage? = nil) {
+        guard let v = videoByID(id) else { return }
+        let newStage = stage ?? v.stage
+        _ = db.execute(
+            "UPDATE videos SET title = ?, note = ?, description = ?, url = ?, platform = ?, stage = ?, updated_at = ? WHERE id = ?",
+            [title ?? v.title, note ?? v.note, description ?? v.description, url ?? v.url, (platform ?? v.platform).rawValue, newStage.rawValue, Date().timeIntervalSince1970, id]
+        )
+        if let stage, stage != v.stage {
+            reindexVideoColumn(v.stage)
+            reindexVideoColumn(stage)
+        }
+        refresh()
+    }
+
+    func deleteVideo(_ id: Int) {
+        _ = db.execute("DELETE FROM video_comments WHERE video_id = ?", [id])
+        _ = db.execute("DELETE FROM videos WHERE id = ?", [id])
+        refresh()
+    }
+
+    func moveVideo(_ id: Int, to stage: VideoStage, at index: Int) {
+        guard let v = videoByID(id) else { return }
+        let fromStage = v.stage
+        var target = videosForStage(stage)
+        target.removeAll { $0.id == id }
+        let clamped = max(0, min(index, target.count))
+        target.insert(v, at: clamped)
+        writeVideoOrder(target, stage: stage)
+        if fromStage != stage {
+            writeVideoOrder(videosForStage(fromStage).filter { $0.id != id }, stage: fromStage)
+        }
+        refresh()
+    }
+
+    func reindexVideoColumn(_ stage: VideoStage) {
+        writeVideoOrder(videosForStage(stage), stage: stage)
+    }
+
+    private func writeVideoOrder(_ ordered: [Video], stage: VideoStage) {
+        for (i, video) in ordered.enumerated() {
+            _ = db.execute("UPDATE videos SET position = ?, updated_at = ? WHERE id = ?", [i, Date().timeIntervalSince1970, video.id])
+        }
+    }
+
+    func addVideoComment(videoID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO video_comments (video_id, body, created_at) VALUES (?, ?, ?)",
+            [videoID, trimmed, Date().timeIntervalSince1970]
         )
         refresh()
     }
@@ -399,6 +521,50 @@ final class Store: ObservableObject {
             return PersonComment(
                 id: id,
                 personId: personID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadVideos() -> [Video] {
+        db.query("SELECT * FROM videos ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let stageRaw = row["stage"] as? String,
+                let stage = VideoStage(rawValue: stageRaw),
+                let platformRaw = row["platform"] as? String,
+                let platform = VideoPlatform(rawValue: platformRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Video(
+                id: id,
+                title: title,
+                note: row["note"] as? String ?? "",
+                description: row["description"] as? String ?? "",
+                url: row["url"] as? String ?? "",
+                platform: platform,
+                stage: stage,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadVideoComments() -> [VideoComment] {
+        db.query("SELECT * FROM video_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let videoID = row["video_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return VideoComment(
+                id: id,
+                videoId: videoID,
                 body: body,
                 createdAt: Date(timeIntervalSince1970: created)
             )

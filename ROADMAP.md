@@ -8,6 +8,8 @@
 - [x] Milestones (1% → 100% of sub-goal)
 - [x] History: last-7-days chart + session log
 - [x] People board: Holding + Check lists (daily/weekly/monthly/quarterly/yearly), drag & drop, card details with comments + openable links
+- [x] Videos board: Holding/Urgent/Important + daily/weekly/monthly watch lists, drag & drop, searchable, details with comments + open-in-browser
+- [x] Search across People and Videos
 - [x] Onboarding + Help with settings
 - [x] Local SQLite storage
 - [x] App icon + bundle

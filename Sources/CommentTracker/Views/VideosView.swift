@@ -1,35 +1,35 @@
 import SwiftUI
 import AppKit
 
-private struct CardTopKey: PreferenceKey {
+private struct VideoCardTopKey: PreferenceKey {
     static var defaultValue: [Int: CGFloat] { [:] }
     static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
         value.merge(nextValue()) { $1 }
     }
 }
 
-struct PeopleView: View {
+struct VideosView: View {
     @EnvironmentObject var store: Store
     @State private var showingAdd = false
     @State private var searchText = ""
 
     private var matchedCount: Int {
-        store.people.filter { store.person($0, matches: searchText) }.count
+        store.videos.filter { store.video($0, matches: searchText) }.count
     }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-            BoardView(searchText: searchText)
+            VideoBoardView(searchText: searchText)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .sheet(isPresented: $showingAdd) {
-            AddPersonView()
+            AddVideoView()
                 .environmentObject(store)
         }
-        .sheet(item: $store.personToDetail) { person in
-            PersonDetailView(personID: person.id)
+        .sheet(item: $store.videoToDetail) { video in
+            VideoDetailView(videoID: video.id)
                 .environmentObject(store)
         }
     }
@@ -37,16 +37,13 @@ struct PeopleView: View {
     private var header: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("People")
+                Text("Videos")
                     .font(.title.bold())
-                Text("\(store.totalPeople) of \(store.peopleGoal) tracked")
+                Text("\(store.totalVideos) in your watch queue")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            ProgressView(value: Double(store.totalPeople), total: Double(max(1, store.peopleGoal)))
-                .tint(.green)
-                .frame(maxWidth: 180)
             Spacer()
             searchField
             if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -57,7 +54,7 @@ struct PeopleView: View {
             Button {
                 showingAdd = true
             } label: {
-                Label("Add Person", systemImage: "person.badge.plus")
+                Label("Add Video", systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
         }
@@ -68,7 +65,7 @@ struct PeopleView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search people…", text: $searchText)
+            TextField("Search videos…", text: $searchText)
                 .textFieldStyle(.plain)
             if !searchText.isEmpty {
                 Button {
@@ -93,15 +90,15 @@ struct PeopleView: View {
 
 // MARK: - Board
 
-struct BoardView: View {
+struct VideoBoardView: View {
     @EnvironmentObject var store: Store
     let searchText: String
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: true) {
             HStack(alignment: .top, spacing: 14) {
-                ForEach(PersonStage.allCases) { stage in
-                    ColumnView(stage: stage, searchText: searchText)
+                ForEach(VideoStage.allCases) { stage in
+                    VideoColumnView(stage: stage, searchText: searchText)
                 }
             }
             .padding(16)
@@ -111,17 +108,17 @@ struct BoardView: View {
 
 // MARK: - Column
 
-struct ColumnView: View {
+struct VideoColumnView: View {
     @EnvironmentObject var store: Store
-    let stage: PersonStage
+    let stage: VideoStage
     let searchText: String
 
     @State private var isDropTargeted = false
     @State private var cardTops: [Int: CGFloat] = [:]
 
-    private var columnSpaceName: String { "col-\(stage.rawValue)" }
-    private var people: [Person] {
-        store.peopleForStage(stage).filter { store.person($0, matches: searchText) }
+    private var columnSpaceName: String { "vidcol-\(stage.rawValue)" }
+    private var videos: [Video] {
+        store.videosForStage(stage).filter { store.video($0, matches: searchText) }
     }
 
     var body: some View {
@@ -129,18 +126,18 @@ struct ColumnView: View {
             header
             ScrollView {
                 LazyVStack(spacing: 8) {
-                    ForEach(people) { person in
-                        PersonCardView(person: person)
+                    ForEach(videos) { video in
+                        VideoCardView(video: video)
                             .background(
                                 GeometryReader { geo in
                                     Color.clear.preference(
-                                        key: CardTopKey.self,
-                                        value: [person.id: geo.frame(in: .named(columnSpaceName)).minY]
+                                        key: VideoCardTopKey.self,
+                                        value: [video.id: geo.frame(in: .named(columnSpaceName)).minY]
                                     )
                                 }
                             )
                     }
-                    if people.isEmpty {
+                    if videos.isEmpty {
                         emptyHint
                     }
                 }
@@ -151,7 +148,7 @@ struct ColumnView: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(stage.isHolding ? Color.gray.opacity(0.05) : stage.color.opacity(0.06))
+                .fill(stage.color.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
@@ -161,7 +158,7 @@ struct ColumnView: View {
         .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers, location in
             handleDrop(providers, location: location)
         }
-        .onPreferenceChange(CardTopKey.self) { value in
+        .onPreferenceChange(VideoCardTopKey.self) { value in
             cardTops = value
         }
     }
@@ -175,12 +172,12 @@ struct ColumnView: View {
                 Text(stage.displayName)
                     .font(.headline)
                 Spacer()
-                Text("\(people.count)")
+                Text("\(videos.count)")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            Text(stage.group)
+            Text(stage == .holding ? "Queue" : "Watch")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -193,7 +190,7 @@ struct ColumnView: View {
             Image(systemName: stage.symbol)
                 .font(.system(size: 22))
                 .foregroundStyle(.tertiary)
-            Text("Drag cards here")
+            Text("Drag videos here")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -208,16 +205,16 @@ struct ColumnView: View {
             guard let idString = object as? String, let id = Int(idString) else { return }
             Task { @MainActor in
                 let index = self.insertionIndex(for: location.y)
-                self.store.movePerson(id, to: stage, at: index)
+                self.store.moveVideo(id, to: stage, at: index)
             }
         }
         return true
     }
 
     private func insertionIndex(for locationY: CGFloat) -> Int {
-        var index = people.count
-        for (i, p) in people.enumerated() {
-            if let top = cardTops[p.id], top > locationY {
+        var index = videos.count
+        for (i, v) in videos.enumerated() {
+            if let top = cardTops[v.id], top > locationY {
                 index = i
                 break
             }
@@ -228,54 +225,49 @@ struct ColumnView: View {
 
 // MARK: - Card
 
-struct PersonCardView: View {
+struct VideoCardView: View {
     @EnvironmentObject var store: Store
-    let person: Person
+    let video: Video
 
-    private var personLinks: [PersonLink] { store.links(for: person.id) }
-    private var personComments: [PersonComment] { store.comments(for: person.id) }
+    private var videoComments: [VideoComment] { store.videoComments(for: video.id) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
-                Text(person.name)
+                Image(systemName: video.platform.symbol)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .background(video.platform.color.gradient, in: RoundedRectangle(cornerRadius: 7))
+                Text(video.title)
                     .font(.subheadline.weight(.bold))
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
                 Spacer()
-                Image(systemName: "doc.on.doc")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
             }
-            if !person.brief.isEmpty {
-                Text(person.brief)
+            if !video.note.isEmpty {
+                Text(video.note)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
             }
             HStack(spacing: 8) {
-                if personComments.count > 0 {
+                if !video.url.isEmpty {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                if videoComments.count > 0 {
                     HStack(spacing: 3) {
                         Image(systemName: "bubble.left")
                             .font(.system(size: 9))
-                        Text("\(personComments.count)")
+                        Text("\(videoComments.count)")
                             .font(.caption2)
                     }
                     .foregroundStyle(.secondary)
                 }
-                HStack(spacing: 5) {
-                    ForEach(Array(personLinks.prefix(3))) { link in
-                        Image(systemName: link.kind.symbol)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                    }
-                    if personLinks.count > 3 {
-                        Text("+\(personLinks.count - 3)")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
                 Spacer()
-                Text(person.updatedAt.formatted(date: .omitted, time: .shortened))
+                Text(video.updatedAt.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -285,7 +277,7 @@ struct PersonCardView: View {
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(person.stage.color)
+                .fill(video.stage.color)
                 .frame(width: 3)
         }
         .overlay(
@@ -295,59 +287,75 @@ struct PersonCardView: View {
         .shadow(color: .black.opacity(0.08), radius: 3, y: 2)
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture(count: 2) {
-            store.personToDetail = person
+            store.videoToDetail = video
         }
         .onDrag {
-            return NSItemProvider(object: "\(person.id)" as NSString)
+            return NSItemProvider(object: "\(video.id)" as NSString)
         }
     }
 }
 
-// MARK: - Add Person
+// MARK: - Add Video
 
-struct AddPersonView: View {
+struct AddVideoView: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name = ""
-    @State private var brief = ""
-    @State private var stage: PersonStage = .holding
+    @State private var title = ""
+    @State private var url = ""
+    @State private var platform: VideoPlatform = .youtube
+    @State private var stage: VideoStage = .holding
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Add Person")
+            Text("Add Video")
                 .font(.title2.bold())
-            TextField("Name", text: $name)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Platform")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("Platform", selection: $platform) {
+                    ForEach(VideoPlatform.allCases) { p in
+                        Label(p.displayName, systemImage: p.symbol).tag(p)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            TextField("Title", text: $title)
                 .textFieldStyle(.roundedBorder)
-            TextField("Brief — who are they, what's the angle", text: $brief)
+
+            TextField("Video link — youtube, x, instagram reel…", text: $url)
                 .textFieldStyle(.roundedBorder)
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("List")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Picker("List", selection: $stage) {
-                    ForEach(PersonStage.allCases) { s in
-                        Text("\(s.group) — \(s.displayName)").tag(s)
+                    ForEach(VideoStage.allCases) { s in
+                        Text(s.displayName).tag(s)
                     }
                 }
-                .pickerStyle(.menu)
                 .labelsHidden()
             }
+
             HStack {
                 Button("Cancel") { dismiss() }
                 Spacer()
                 Button {
-                    store.addPerson(name: name, brief: brief, stage: stage)
+                    store.addVideo(title: title, url: url, platform: platform, stage: stage)
                     dismiss()
                 } label: {
-                    Label("Add", systemImage: "person.badge.plus")
+                    Label("Add", systemImage: "plus")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding(24)
-        .frame(width: 400)
+        .frame(width: 440)
     }
 }

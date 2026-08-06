@@ -17,6 +17,8 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 - **History** — last-7-days chart + all past sessions
 - **People board (Trello-style)** — track up to 313 people across a **Holding** list and **Check** lists (Daily / Weekly / Monthly / Quarterly / Yearly), drag cards between lists and reorder
 - **Person cards with details** — double-click a card for description, activity comments, and openable links (X, YouTube, Instagram, videos, websites, anything)
+- **Videos board (Trello-style)** — save YouTube, X and Instagram-reel videos across Holding / Urgent / Important / Daily / Weekly / Monthly watch lists, drag & drop, search
+- **Video cards with details** — double-click to edit notes, add comments, or open the video in your browser
 - **Local SQLite storage** — nothing leaves the machine
 - **First-run onboarding**, Help screen with settings, and keyboard shortcuts
 - Custom app icon

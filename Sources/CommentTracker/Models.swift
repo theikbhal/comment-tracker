@@ -210,9 +210,108 @@ struct PersonLink: Identifiable {
     var kind: PersonLinkKind
 }
 
-struct PersonComment: Identifiable {
+struct PersonComment: Identifiable, Equatable {
     let id: Int
     var personId: Int
+    var body: String
+    var createdAt: Date
+}
+
+// MARK: - Videos (Trello-style board)
+
+enum VideoStage: String, CaseIterable, Identifiable {
+    case holding = "holding"
+    case urgent = "urgent"
+    case important = "important"
+    case daily = "daily"
+    case weekly = "weekly"
+    case monthly = "monthly"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .holding: return "Holding"
+        case .urgent: return "Urgent"
+        case .important: return "Important"
+        case .daily: return "Daily Watch"
+        case .weekly: return "Weekly Watch"
+        case .monthly: return "Monthly Watch"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .holding: return "pause.circle"
+        case .urgent: return "exclamationmark.triangle.fill"
+        case .important: return "star.fill"
+        case .daily: return "sun.max"
+        case .weekly: return "calendar"
+        case .monthly: return "calendar.badge.clock"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .holding: return .gray
+        case .urgent: return .red
+        case .important: return .yellow
+        case .daily: return .orange
+        case .weekly: return .teal
+        case .monthly: return .blue
+        }
+    }
+}
+
+enum VideoPlatform: String, CaseIterable, Identifiable {
+    case youtube, x, instagram, other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .youtube: return "YouTube"
+        case .x: return "X Video"
+        case .instagram: return "Instagram Reel"
+        case .other: return "Other"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .youtube: return "play.rectangle.fill"
+        case .x: return "xmark.circle.fill"
+        case .instagram: return "camera.aperture"
+        case .other: return "link"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .youtube: return .red
+        case .x: return .blue
+        case .instagram: return .pink
+        case .other: return .gray
+        }
+    }
+}
+
+struct Video: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var note: String
+    var description: String
+    var url: String
+    var platform: VideoPlatform
+    var stage: VideoStage
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct VideoComment: Identifiable, Equatable {
+    let id: Int
+    var videoId: Int
     var body: String
     var createdAt: Date
 }

@@ -22,6 +22,7 @@ struct HelpView: View {
                 subGoalCard
                 peopleGoalCard
                 howToCard
+                videosCard
                 shortcutsCard
                 dataCard
                 roadmapCard
@@ -134,6 +135,29 @@ struct HelpView: View {
                 row("2", "Start a session", "Hit Start Session, it times your push so you can see how much you can do.")
                 row("3", "Add a comment per post", "Pick the platform (x.com is your focus), tap Add Comment. Optional note + link.")
                 row("4", "Watch milestones", "Hit 1% of your sub-goal and you've already won — keep going through 5%, 10%, 25%, 50%, 75%, 100%.")
+            }
+            .padding(10)
+            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+        }
+        .card()
+    }
+
+    private var videosCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Videos board", systemImage: "play.rectangle")
+                .font(.headline)
+            Text("Save videos you want to watch on a Trello-style board. Add YouTube, X video or Instagram reel links.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Lists: Holding (queue) · Urgent · Important · Daily Watch · Weekly Watch · Monthly Watch")
+                    .font(.caption)
+                Text("• Search filters across title, notes, links and comments")
+                    .font(.caption)
+                Text("• Drag cards between lists and reorder them")
+                    .font(.caption)
+                Text("• Double-click a card to edit, add comments, or open the video in your browser")
+                    .font(.caption)
             }
             .padding(10)
             .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
