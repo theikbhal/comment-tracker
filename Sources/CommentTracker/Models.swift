@@ -315,3 +315,118 @@ struct VideoComment: Identifiable, Equatable {
     var body: String
     var createdAt: Date
 }
+
+// MARK: - Trackers (daily life routines)
+
+func dayString(_ date: Date) -> String {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    return f.string(from: date)
+}
+
+func dateFromDay(_ s: String) -> Date? {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    return f.date(from: s)
+}
+
+func colorForTrackerName(_ name: String) -> Color {
+    switch name {
+    case "red": return .red
+    case "green": return .green
+    case "orange": return .orange
+    case "yellow": return .yellow
+    case "teal": return .teal
+    case "purple": return .purple
+    case "pink": return .pink
+    case "indigo": return .indigo
+    case "gray": return .gray
+    default: return .blue
+    }
+}
+
+let trackerColorNames = ["blue", "indigo", "purple", "pink", "red", "orange", "yellow", "green", "teal", "gray"]
+
+struct Tracker: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var icon: String
+    var colorName: String
+    var category: String
+    var isCounter: Bool
+    var target: Int
+    var scheduleNote: String
+    var isPreset: Bool
+    var enabled: Bool
+    var sortOrder: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var color: Color { colorForTrackerName(colorName) }
+}
+
+struct TrackerEntry: Identifiable, Equatable {
+    let id: Int
+    var trackerId: Int
+    var day: String
+    var count: Int
+    var note: String
+}
+
+struct TrackerPreset {
+    let name: String
+    let icon: String
+    let color: String
+    let category: String
+    let isCounter: Bool
+    let target: Int
+    let scheduleNote: String
+
+    static let all: [TrackerPreset] = [
+        // Namaz
+        TrackerPreset(name: "Fajr", icon: "sunrise", color: "indigo", category: "Namaz", isCounter: false, target: 1, scheduleNote: "Pray 5 times daily"),
+        TrackerPreset(name: "Dhuhr", icon: "sun.max", color: "yellow", category: "Namaz", isCounter: false, target: 1, scheduleNote: "Pray 5 times daily"),
+        TrackerPreset(name: "Asr", icon: "sun.horizon", color: "orange", category: "Namaz", isCounter: false, target: 1, scheduleNote: "Pray 5 times daily"),
+        TrackerPreset(name: "Maghrib", icon: "sunset", color: "red", category: "Namaz", isCounter: false, target: 1, scheduleNote: "Pray 5 times daily"),
+        TrackerPreset(name: "Isha", icon: "moon.stars", color: "purple", category: "Namaz", isCounter: false, target: 1, scheduleNote: "Pray 5 times daily"),
+        // Quran
+        TrackerPreset(name: "Quran — listen 1 para", icon: "book", color: "green", category: "Quran", isCounter: false, target: 1, scheduleNote: "One para (juz) a day"),
+        // Zikr
+        TrackerPreset(name: "Zikr — morning", icon: "sunrise", color: "teal", category: "Zikr", isCounter: false, target: 1, scheduleNote: "Morning adhkar"),
+        TrackerPreset(name: "Zikr — evening", icon: "moon.stars", color: "indigo", category: "Zikr", isCounter: false, target: 1, scheduleNote: "Evening adhkar"),
+        TrackerPreset(name: "Darood — 1000", icon: "sparkles", color: "green", category: "Zikr", isCounter: true, target: 1000, scheduleNote: "1000 darood"),
+        TrackerPreset(name: "Astaghfar — 1000", icon: "drop.fill", color: "blue", category: "Zikr", isCounter: true, target: 1000, scheduleNote: "1000 astaghfar"),
+        // Dua
+        TrackerPreset(name: "Dua", icon: "hands.sparkles", color: "purple", category: "Dua", isCounter: false, target: 1, scheduleNote: "Make dua"),
+        // Fasting
+        TrackerPreset(name: "Fasting", icon: "moon.fill", color: "teal", category: "Fasting", isCounter: false, target: 1, scheduleNote: "Ramadan + every Thursday"),
+        // Masjid / Jamaat
+        TrackerPreset(name: "Jamaat", icon: "building.columns", color: "blue", category: "Masjid", isCounter: false, target: 1, scheduleNote: "3/month · 40/year · Sunday night"),
+        TrackerPreset(name: "Masjid — attend", icon: "building.columns.fill", color: "indigo", category: "Masjid", isCounter: false, target: 1, scheduleNote: "Attend masjid"),
+        // Family
+        TrackerPreset(name: "Wife — time spent", icon: "heart", color: "pink", category: "Family", isCounter: false, target: 1, scheduleNote: "Quality time"),
+        TrackerPreset(name: "Wife — listen", icon: "ear", color: "red", category: "Family", isCounter: false, target: 1, scheduleNote: "Really listen"),
+        TrackerPreset(name: "Wife — help at home", icon: "house", color: "orange", category: "Family", isCounter: false, target: 1, scheduleNote: "Help around the house"),
+        // Parents
+        TrackerPreset(name: "Parents — listen", icon: "ear.fill", color: "teal", category: "Parents", isCounter: false, target: 1, scheduleNote: "Listen to them"),
+        TrackerPreset(name: "Parents — talk", icon: "phone", color: "green", category: "Parents", isCounter: false, target: 1, scheduleNote: "Call / visit"),
+        // Relatives
+        TrackerPreset(name: "Relatives", icon: "figure.2", color: "blue", category: "Relatives", isCounter: false, target: 1, scheduleNote: "Keep in touch"),
+        // Parenting
+        TrackerPreset(name: "Parenting — teach language", icon: "textformat", color: "indigo", category: "Parenting", isCounter: false, target: 1, scheduleNote: "Teach language"),
+        TrackerPreset(name: "Parenting — remind namaz", icon: "clock", color: "green", category: "Parenting", isCounter: false, target: 1, scheduleNote: "Remind namaz"),
+        TrackerPreset(name: "Parenting — health", icon: "heart.circle", color: "pink", category: "Parenting", isCounter: false, target: 1, scheduleNote: "Health & routine"),
+        // Friends
+        TrackerPreset(name: "Friend — muslim", icon: "person.2", color: "green", category: "Friends", isCounter: false, target: 1, scheduleNote: "Stay in touch"),
+        TrackerPreset(name: "Friend — tech", icon: "laptopcomputer", color: "blue", category: "Friends", isCounter: false, target: 1, scheduleNote: "Tech circle"),
+        TrackerPreset(name: "Friend — business", icon: "briefcase", color: "purple", category: "Friends", isCounter: false, target: 1, scheduleNote: "Business circle"),
+        // Health
+        TrackerPreset(name: "Health — steps", icon: "shoeprints.fill", color: "orange", category: "Health", isCounter: true, target: 10000, scheduleNote: "10,000 steps"),
+        TrackerPreset(name: "Health — diet", icon: "fork.knife", color: "red", category: "Health", isCounter: false, target: 1, scheduleNote: "Eat clean"),
+        // Business
+        TrackerPreset(name: "Business — app build", icon: "hammer", color: "indigo", category: "Business", isCounter: false, target: 1, scheduleNote: "Ship / build"),
+        TrackerPreset(name: "Business — content", icon: "megaphone", color: "pink", category: "Business", isCounter: false, target: 1, scheduleNote: "Post / create"),
+        TrackerPreset(name: "Business — sales", icon: "chart.line.uptrend", color: "green", category: "Business", isCounter: false, target: 1, scheduleNote: "Reach out / close"),
+        TrackerPreset(name: "Business — automation", icon: "gearshape.2", color: "teal", category: "Business", isCounter: false, target: 1, scheduleNote: "Automate"),
+    ]
+}

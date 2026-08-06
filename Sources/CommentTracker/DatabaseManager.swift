@@ -85,6 +85,31 @@ final class DatabaseManager {
             body TEXT NOT NULL,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS trackers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            icon TEXT NOT NULL DEFAULT 'checkmark.circle',
+            color TEXT NOT NULL DEFAULT 'blue',
+            category TEXT NOT NULL DEFAULT 'Custom',
+            is_counter INTEGER NOT NULL DEFAULT 0,
+            target INTEGER NOT NULL DEFAULT 1,
+            schedule_note TEXT,
+            is_preset INTEGER NOT NULL DEFAULT 0,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS tracker_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tracker_id INTEGER NOT NULL,
+            day TEXT NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            note TEXT,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            UNIQUE(tracker_id, day)
+        );
         """
         for statement in schema.split(separator: ";").map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) })
         where !statement.isEmpty {

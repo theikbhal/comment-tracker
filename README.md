@@ -19,6 +19,9 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 - **Person cards with details** — double-click a card for description, activity comments, and openable links (X, YouTube, Instagram, videos, websites, anything)
 - **Videos board (Trello-style)** — save YouTube, X and Instagram-reel videos across Holding / Urgent / Important / Daily / Weekly / Monthly watch lists, drag & drop, search
 - **Video cards with details** — double-click to edit notes, add comments, or open the video in your browser
+- **Tracker (daily routines)** — checkboxes and counters with monthly calendar views and notes: **Namaz (5)**, **Quran (1 para)**, **Zikr** (morning/evening, 1000 darood, 1000 astaghfar), **Dua**, **Fasting** (Ramadan + Thursdays), **Jamaat** (3/month · 40/year · Sunday night), **Masjid**, **Family/Wife**, **Parents**, **Relatives**, **Parenting**, **Friends**, **Health** (steps, diet), **Business** (app build, content, sales, automation)
+- **Enable/disable any tracker** in Manage; add custom trackers with your own icon, color and target
+- **Global search (⌘K)** — search across tabs, trackers, people and videos
 - **Local SQLite storage** — nothing leaves the machine
 - **First-run onboarding**, Help screen with settings, and keyboard shortcuts
 - Custom app icon
@@ -37,6 +40,7 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 |----------|--------|
 | `⌘ N` | Add comment |
 | `⇧ ⌘ S` | Start / End session |
+| `⌘ K` | Search everything |
 
 ## Build & run
 

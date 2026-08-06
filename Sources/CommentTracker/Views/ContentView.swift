@@ -1,12 +1,13 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, people, videos, history, help
+    case today, tracker, people, videos, history, help
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .today: return "Today"
+        case .tracker: return "Tracker"
         case .people: return "People"
         case .videos: return "Videos"
         case .history: return "History"
@@ -17,6 +18,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .today: return "target"
+        case .tracker: return "checklist"
         case .people: return "person.2"
         case .videos: return "play.rectangle"
         case .history: return "chart.bar.xaxis"
@@ -30,6 +32,7 @@ struct ContentView: View {
     @State private var selection: SidebarItem = .today
     @State private var showingAdd = false
     @State private var showingOnboarding = false
+    @State private var showingSearch = false
 
     var body: some View {
         NavigationSplitView {
@@ -55,6 +58,15 @@ struct ContentView: View {
             OnboardingView()
                 .environmentObject(store)
         }
+        .sheet(isPresented: $showingSearch) {
+            GlobalSearchView(
+                onNavigate: { selection = $0 },
+                onOpenTracker: { store.trackerToDetail = store.trackerByID($0) },
+                onOpenPerson: { store.personToDetail = store.personByID($0) },
+                onOpenVideo: { store.videoToDetail = store.videoByID($0) }
+            )
+            .environmentObject(store)
+        }
         .onAppear {
             if !store.isOnboarded {
                 showingOnboarding = true
@@ -66,12 +78,16 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .toggleSession)) { _ in
             store.toggleSession()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .search)) { _ in
+            showingSearch = true
+        }
     }
 
     @ViewBuilder
     private func detail(for item: SidebarItem) -> some View {
         switch item {
         case .today: TodayView()
+        case .tracker: TrackerView()
         case .people: PeopleView()
         case .videos: VideosView()
         case .history: HistoryView()

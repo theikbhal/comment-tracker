@@ -10,6 +10,8 @@
 - [x] People board: Holding + Check lists (daily/weekly/monthly/quarterly/yearly), drag & drop, card details with comments + openable links
 - [x] Videos board: Holding/Urgent/Important + daily/weekly/monthly watch lists, drag & drop, searchable, details with comments + open-in-browser
 - [x] Search across People and Videos
+- [x] Tracker (daily routines): Namaz/Quran/Zikr/Fasting/Jamaat/Family/Health/Business — checkboxes + counters, monthly calendar + notes, enable/disable, custom trackers
+- [x] Global ⌘K search across tabs, trackers, people, videos
 - [x] Onboarding + Help with settings
 - [x] Local SQLite storage
 - [x] App icon + bundle

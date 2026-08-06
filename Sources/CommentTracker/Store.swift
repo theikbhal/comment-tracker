@@ -25,6 +25,10 @@ final class Store: ObservableObject {
     @Published var videoComments: [VideoComment] = []
     @Published var videoToDetail: Video?
 
+    @Published var trackers: [Tracker] = []
+    @Published var trackerEntries: [TrackerEntry] = []
+    @Published var trackerToDetail: Tracker?
+
     private var timer: Timer?
 
     init() {
@@ -48,6 +52,7 @@ final class Store: ObservableObject {
             peopleGoal = p
         }
         isOnboarded = settings["onboarded"] == "true"
+        seedPresetsIfNeeded()
         refresh()
     }
 
@@ -60,6 +65,8 @@ final class Store: ObservableObject {
         peopleComments = loadPersonComments()
         videos = loadVideos()
         videoComments = loadVideoComments()
+        trackers = loadTrackers()
+        trackerEntries = loadTrackerEntries()
     }
 
     // MARK: - Onboarding
@@ -342,6 +349,174 @@ final class Store: ObservableObject {
         refresh()
     }
 
+    // MARK: - Trackers
+
+    var enabledTrackers: [Tracker] {
+        trackers.filter { $0.enabled }
+    }
+
+    func trackerByID(_ id: Int) -> Tracker? {
+        trackers.first { $0.id == id }
+    }
+
+    var trackerCategories: [String] {
+        var seen: [String] = []
+        let order = ["Namaz", "Quran", "Zikr", "Dua", "Fasting", "Masjid", "Family", "Parents", "Relatives", "Parenting", "Friends", "Health", "Business", "Custom"]
+        for cat in order where enabledTrackers.contains(where: { $0.category == cat }) {
+            seen.append(cat)
+        }
+        for t in enabledTrackers where !seen.contains(t.category) {
+            seen.append(t.category)
+        }
+        return seen
+    }
+
+    func trackersForCategory(_ category: String) -> [Tracker] {
+        enabledTrackers
+            .filter { $0.category == category }
+            .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    func tracker(_ t: Tracker, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        return t.name.lowercased().contains(q)
+            || t.category.lowercased().contains(q)
+            || t.scheduleNote.lowercased().contains(q)
+    }
+
+    // MARK: Entries
+
+    func entry(for trackerID: Int, on day: String) -> TrackerEntry? {
+        trackerEntries.first { $0.trackerId == trackerID && $0.day == day }
+    }
+
+    func count(for trackerID: Int, on day: String) -> Int {
+        entry(for: trackerID, on: day)?.count ?? 0
+    }
+
+    func note(for trackerID: Int, on day: String) -> String {
+        entry(for: trackerID, on: day)?.note ?? ""
+    }
+
+    func isDone(trackerID: Int, on day: String) -> Bool {
+        count(for: trackerID, on: day) > 0
+    }
+
+    func toggle(_ trackerID: Int, on day: String) {
+        let current = count(for: trackerID, on: day)
+        upsertEntry(trackerID: trackerID, day: day, count: current > 0 ? 0 : 1, note: nil)
+    }
+
+    func setCount(_ trackerID: Int, on day: String, _ value: Int) {
+        upsertEntry(trackerID: trackerID, day: day, count: max(0, value), note: nil)
+    }
+
+    func setNote(_ trackerID: Int, on day: String, _ note: String) {
+        upsertEntry(trackerID: trackerID, day: day, count: nil, note: note)
+    }
+
+    private func upsertEntry(trackerID: Int, day: String, count: Int?, note: String?) {
+        let existing = entry(for: trackerID, on: day)
+        let c = count ?? existing?.count ?? 0
+        let n = note ?? existing?.note ?? ""
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO tracker_entries (tracker_id, day, count, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(tracker_id, day) DO UPDATE SET count = excluded.count, note = excluded.note, updated_at = excluded.updated_at",
+            [trackerID, day, c, n, now, now]
+        )
+        refresh()
+    }
+
+    func entries(for trackerID: Int, inMonthOf date: Date) -> [TrackerEntry] {
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.year, .month], from: date)
+        guard let monthStart = cal.date(from: comps),
+              let monthEnd = cal.date(byAdding: DateComponents(month: 1), to: monthStart) else { return [] }
+        let start = dayString(monthStart)
+        let end = dayString(monthEnd)
+        return trackerEntries.filter { $0.trackerId == trackerID && $0.day >= start && $0.day < end }
+    }
+
+    func daysDone(for trackerID: Int, inMonthOf date: Date) -> Set<String> {
+        Set(entries(for: trackerID, inMonthOf: date).filter { $0.count > 0 }.map { $0.day })
+    }
+
+    func monthDoneCount(for trackerID: Int, inMonthOf date: Date) -> Int {
+        daysDone(for: trackerID, inMonthOf: date).count
+    }
+
+    func streak(for trackerID: Int) -> Int {
+        let cal = Calendar.current
+        var day = cal.startOfDay(for: Date())
+        let today = day
+        if !isDone(trackerID: trackerID, on: dayString(today)) {
+            guard let y = cal.date(byAdding: .day, value: -1, to: today),
+                  isDone(trackerID: trackerID, on: dayString(y)) else { return 0 }
+            day = y
+        }
+        var count = 0
+        while isDone(trackerID: trackerID, on: dayString(day)) {
+            count += 1
+            guard let prev = cal.date(byAdding: .day, value: -1, to: day) else { break }
+            day = prev
+        }
+        return count
+    }
+
+    // MARK: CRUD
+
+    func addTracker(name: String, category: String, icon: String, colorName: String, isCounter: Bool, target: Int, scheduleNote: String) {
+        let now = Date().timeIntervalSince1970
+        let maxOrder = (trackers.filter { $0.category == category }.map { $0.sortOrder }.max() ?? -1) + 1
+        _ = db.execute(
+            "INSERT INTO trackers (name, icon, color, category, is_counter, target, schedule_note, is_preset, enabled, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, ?)",
+            [name, icon, colorName, category, isCounter ? 1 : 0, max(1, target), scheduleNote, maxOrder, now, now]
+        )
+        refresh()
+    }
+
+    func updateTracker(id: Int, enabled: Bool? = nil, target: Int? = nil) {
+        guard let t = trackerByID(id) else { return }
+        _ = db.execute(
+            "UPDATE trackers SET enabled = ?, target = ?, updated_at = ? WHERE id = ?",
+            [enabled ?? t.enabled ? 1 : 0, target ?? t.target, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteTracker(_ id: Int) {
+        _ = db.execute("DELETE FROM tracker_entries WHERE tracker_id = ?", [id])
+        _ = db.execute("DELETE FROM trackers WHERE id = ?", [id])
+        refresh()
+    }
+
+    func seedPresetsIfNeeded() {
+        let settings = db.allSettings
+        guard settings["presetsSeeded"] != "true" else { return }
+        insertPresets()
+        db.setSetting("presetsSeeded", "true")
+        refresh()
+    }
+
+    func reseedMissingPresets() {
+        let existingNames = Set(trackers.map { $0.name })
+        let missing = TrackerPreset.all.filter { !existingNames.contains($0.name) }
+        guard !missing.isEmpty else { return }
+        insertPresets(missing)
+        refresh()
+    }
+
+    private func insertPresets(_ presets: [TrackerPreset] = TrackerPreset.all) {
+        let now = Date().timeIntervalSince1970
+        for (i, p) in presets.enumerated() {
+            _ = db.execute(
+                "INSERT INTO trackers (name, icon, color, category, is_counter, target, schedule_note, is_preset, enabled, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)",
+                [p.name, p.icon, p.color, p.category, p.isCounter ? 1 : 0, p.target, p.scheduleNote, i, now, now]
+            )
+        }
+    }
+
     // MARK: - Derived data
 
     var todayStart: Date {
@@ -567,6 +742,49 @@ final class Store: ObservableObject {
                 videoId: videoID,
                 body: body,
                 createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadTrackers() -> [Tracker] {
+        db.query("SELECT * FROM trackers ORDER BY sort_order ASC, id ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let category = row["category"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Tracker(
+                id: id,
+                name: name,
+                icon: row["icon"] as? String ?? "checkmark.circle",
+                colorName: row["color"] as? String ?? "blue",
+                category: category,
+                isCounter: (row["is_counter"] as? Int ?? 0) == 1,
+                target: row["target"] as? Int ?? 1,
+                scheduleNote: row["schedule_note"] as? String ?? "",
+                isPreset: (row["is_preset"] as? Int ?? 0) == 1,
+                enabled: (row["enabled"] as? Int ?? 1) == 1,
+                sortOrder: row["sort_order"] as? Int ?? 0,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadTrackerEntries() -> [TrackerEntry] {
+        db.query("SELECT * FROM tracker_entries ORDER BY day ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let trackerID = row["tracker_id"] as? Int,
+                let day = row["day"] as? String
+            else { return nil }
+            return TrackerEntry(
+                id: id,
+                trackerId: trackerID,
+                day: day,
+                count: row["count"] as? Int ?? 0,
+                note: row["note"] as? String ?? ""
             )
         }
     }

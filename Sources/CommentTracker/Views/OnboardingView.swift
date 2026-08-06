@@ -13,7 +13,8 @@ struct OnboardingView: View {
             switch step {
             case 1: welcomeStep
             case 2: platformsStep
-            default: videosStep
+            case 3: videosStep
+            default: trackerStep
             }
         }
         .frame(width: 580)
@@ -203,6 +204,49 @@ struct OnboardingView: View {
             Button {
                 store.updateGoal(parsedGoal)
                 store.updateSubGoal(subGoal)
+                step = 4
+            } label: {
+                Label("Continue", systemImage: "arrow.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.bottom, 28)
+        }
+        .padding(28)
+    }
+
+    private var trackerStep: some View {
+        VStack(spacing: 22) {
+            VStack(spacing: 6) {
+                Text("Track your daily routines")
+                    .font(.title2.bold())
+                    .padding(.top, 32)
+                Text("Namaz, Quran, zikr, fasting, family, health, business and more.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 10) {
+                trackerRow("Namaz", detail: "Fajr · Dhuhr · Asr · Maghrib · Isha — each with checkboxes and daily notes")
+                trackerRow("Quran & Zikr", detail: "Listen one para · morning/evening zikr · 1000 darood · 1000 astaghfar counters")
+                trackerRow("Fasting & Masjid", detail: "Fasting (Ramadan + Thursdays) · jamaat (3/month, 40/year) · attend masjid")
+                trackerRow("Family & Parenting", detail: "Wife, parents, relatives, kids — listen, help, talk")
+                trackerRow("Health & Business", detail: "Steps, diet · app build, content, sales, automation")
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Every tracker has a calendar view with notes. Turn any on or off in Manage.")
+                    .font(.caption)
+                Text("Press ⌘K to search everything in the app.")
+                    .font(.caption)
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                store.updateGoal(parsedGoal)
+                store.updateSubGoal(subGoal)
                 store.finishOnboarding()
                 dismiss()
             } label: {
@@ -214,6 +258,26 @@ struct OnboardingView: View {
             .padding(.bottom, 28)
         }
         .padding(28)
+    }
+
+    private func trackerRow(_ title: String, detail: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.blue)
+                .frame(width: 36, height: 36)
+                .background(.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func videoRow(_ stage: VideoStage, detail: String) -> some View {

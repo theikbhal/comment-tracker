@@ -22,7 +22,9 @@ struct HelpView: View {
                 subGoalCard
                 peopleGoalCard
                 howToCard
+                trackerCard
                 videosCard
+                searchCard
                 shortcutsCard
                 dataCard
                 roadmapCard
@@ -142,6 +144,38 @@ struct HelpView: View {
         .card()
     }
 
+    private var trackerCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Tracker — daily routines", systemImage: "checklist")
+                .font(.headline)
+            Text("Track any daily habit with a checkbox or a counter. Included: Namaz (5), Quran (1 para), Zikr (morning/evening, 1000 darood, 1000 astaghfar), Dua, Fasting (Ramadan + Thursdays), Jamaat (3/month · 40/year · Sunday night), Masjid, Family, Parents, Relatives, Parenting, Friends, Health, Business.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("• Checkboxes mark done/not done; counters track up to a daily target")
+                    .font(.caption)
+                Text("• Every tracker has a monthly calendar — tap any day to set count + note")
+                    .font(.caption)
+                Text("• Manage (gear icon) turns any tracker on or off; add custom trackers with your own icon, color and target")
+                    .font(.caption)
+            }
+            .padding(10)
+            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+        }
+        .card()
+    }
+
+    private var searchCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Search everything", systemImage: "magnifyingglass")
+                .font(.headline)
+            Text("Press ⌘K to search across tabs, trackers, people and videos. Type, then click (or Enter) to jump straight to the item.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
     private var videosCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Videos board", systemImage: "play.rectangle")
@@ -172,6 +206,7 @@ struct HelpView: View {
             HStack(spacing: 24) {
                 shortcutRow("⌘ N", "Add Comment")
                 shortcutRow("⇧ ⌘ S", "Start / End Session")
+                shortcutRow("⌘ K", "Search Everything")
             }
         }
         .card()

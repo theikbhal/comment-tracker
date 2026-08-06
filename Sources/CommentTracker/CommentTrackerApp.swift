@@ -4,6 +4,7 @@ import AppKit
 extension Notification.Name {
     static let addComment = Notification.Name("addComment")
     static let toggleSession = Notification.Name("toggleSession")
+    static let search = Notification.Name("search")
 }
 
 @main
@@ -27,6 +28,12 @@ struct CommentTrackerApp: App {
                     NotificationCenter.default.post(name: .toggleSession, object: nil)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+            }
+            CommandGroup(after: .newItem) {
+                Button("Search Everything…") {
+                    NotificationCenter.default.post(name: .search, object: nil)
+                }
+                .keyboardShortcut("k", modifiers: .command)
             }
         }
     }
