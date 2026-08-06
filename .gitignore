@@ -1,0 +1,20 @@
+# Build
+.build/
+
+# App bundle output
+dist/
+*.dmg
+
+# Xcode / SPM
+DerivedData/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Icon staging
+Resources/AppIcon.iconset/
+Resources/AppIcon-1024.png
+Resources/AppIcon.icns

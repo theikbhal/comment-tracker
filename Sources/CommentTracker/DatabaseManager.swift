@@ -1,0 +1,131 @@
+import Foundation
+import SQLite3
+
+private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+@MainActor
+final class DatabaseManager {
+    static let shared = DatabaseManager()
+
+    private var db: OpaquePointer?
+
+    var databaseURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("CommentTracker", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("comments.sqlite")
+    }
+
+    private init() {
+        if sqlite3_open(databaseURL.path, &db) == SQLITE_OK {
+            migrate()
+        } else {
+            fatalError("Could not open database at \(databaseURL.path)")
+        }
+    }
+
+    private func migrate() {
+        let schema = """
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform TEXT NOT NULL,
+            body TEXT,
+            url TEXT,
+            session_id INTEGER,
+            created_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at REAL NOT NULL,
+            ended_at REAL,
+            goal INTEGER NOT NULL
+        );
+        """
+        for statement in schema.split(separator: ";").map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) })
+        where !statement.isEmpty {
+            _ = execute(statement)
+        }
+    }
+
+    @discardableResult
+    func execute(_ sql: String, _ bind: [Any?] = []) -> Bool {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+        bindParams(stmt, bind)
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
+    func lastInsertID() -> Int {
+        Int(sqlite3_last_insert_rowid(db))
+    }
+
+    func query(_ sql: String, _ bind: [Any?] = []) -> [[String: Any]] {
+        var rows: [[String: Any]] = []
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        bindParams(stmt, bind)
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            var row: [String: Any] = [:]
+            for col in 0..<sqlite3_column_count(stmt) {
+                let name = String(cString: sqlite3_column_name(stmt, col))
+                switch sqlite3_column_type(stmt, col) {
+                case SQLITE_INTEGER:
+                    row[name] = Int(sqlite3_column_int64(stmt, col))
+                case SQLITE_FLOAT:
+                    row[name] = sqlite3_column_double(stmt, col)
+                case SQLITE_TEXT:
+                    row[name] = String(cString: sqlite3_column_text(stmt, col))
+                default:
+                    row[name] = NSNull()
+                }
+            }
+            rows.append(row)
+        }
+        return rows
+    }
+
+    private func bindParams(_ stmt: OpaquePointer?, _ bind: [Any?]) {
+        for (i, v) in bind.enumerated() {
+            let idx = Int32(i + 1)
+            switch v {
+            case let s as String:
+                sqlite3_bind_text(stmt, idx, s, -1, SQLITE_TRANSIENT)
+            case let i as Int:
+                sqlite3_bind_int64(stmt, idx, Int64(i))
+            case let d as Double:
+                sqlite3_bind_double(stmt, idx, d)
+            case let b as Bool:
+                sqlite3_bind_int(stmt, idx, b ? 1 : 0)
+            case is NSNull, nil:
+                sqlite3_bind_null(stmt, idx)
+            default:
+                sqlite3_bind_null(stmt, idx)
+            }
+        }
+    }
+
+    // MARK: - Settings
+
+    var allSettings: [String: String] {
+        var out: [String: String] = [:]
+        for row in query("SELECT key, value FROM settings") {
+            if let k = row["key"] as? String, let v = row["value"] as? String {
+                out[k] = v
+            }
+        }
+        return out
+    }
+
+    func setSetting(_ key: String, _ value: String) {
+        _ = execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [key, value]
+        )
+    }
+}
