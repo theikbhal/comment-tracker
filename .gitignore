@@ -4,6 +4,10 @@
 # App bundle output
 dist/
 *.dmg
+CommentTracker-*.zip
+
+# Vercel
+landing/.vercel/
 
 # Xcode / SPM
 DerivedData/

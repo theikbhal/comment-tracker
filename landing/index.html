@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comment Tracker — Push your daily commenting goal</title>
+  <meta name="description" content="A native macOS app to push your daily commenting goal. Track comments on x.com, yt.com and ig.com, time your sessions, and see how much you can do." />
+  <meta property="og:title" content="Comment Tracker" />
+  <meta property="og:description" content="Push your daily commenting goal on macOS. Sub-goals, sessions, milestones — all local with SQLite." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="icon.png" />
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#">
+        <span class="brand-mark">💬</span>
+        <span>Comment Tracker</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#platforms">Platforms</a>
+        <a href="#how">How it works</a>
+        <a href="#roadmap">Roadmap</a>
+        <a class="nav-cta" href="https://github.com/theikbhal/comment-tracker/releases" target="_blank" rel="noopener">Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <span class="badge">Native macOS · SwiftUI · SQLite</span>
+          <h1>Push your daily commenting goal.</h1>
+          <p class="lead">
+            313 comments a day is a lot. Comment Tracker breaks it into
+            <strong>sub-goals you control</strong>, times your sessions, and shows
+            you exactly how much you can do.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/theikbhal/comment-tracker/releases/latest" target="_blank" rel="noopener">
+              Download for macOS
+              <span class="btn-sub">Free · v1.0.0</span>
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/theikbhal/comment-tracker" target="_blank" rel="noopener">
+              View source on GitHub ↗
+            </a>
+          </div>
+          <p class="hero-note">Requires macOS 14+. Data stays on your Mac.</p>
+        </div>
+        <div class="hero-visual">
+          <div class="window">
+            <div class="window-bar">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+              <span class="window-title">Comment Tracker — Today</span>
+            </div>
+            <div class="window-body">
+              <div class="ring-wrap">
+                <div class="ring">
+                  <div class="ring-center">
+                    <strong>27%</strong>
+                    <span>of sub-goal</span>
+                  </div>
+                </div>
+                <div class="ring-caption">8 / 30 <span>sub-goal</span></div>
+              </div>
+              <div class="card x-focus">
+                <span class="platform-dot x"></span>
+                <div>
+                  <strong>x.com</strong>
+                  <span>Primary — your focus</span>
+                </div>
+                <span class="count">8</span>
+                <span class="count-total">/ 30</span>
+              </div>
+              <div class="row">
+                <div class="card small">
+                  <span class="platform-dot yt"></span>
+                  <div><strong>yt.com</strong><span>0 / 30</span></div>
+                </div>
+                <div class="card small">
+                  <span class="platform-dot ig"></span>
+                  <div><strong>ig.com</strong><span>0 / 30</span></div>
+                </div>
+              </div>
+              <div class="card session">
+                <span class="live-dot"></span>
+                <div>
+                  <strong>Session live</strong>
+                  <span class="mono">00:24:36 · 12/hr pace</span>
+                </div>
+                <span class="trophy">🏆 1% won</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Built to keep you pushing</h2>
+          <p>Small wins every day. Big number at the end.</p>
+        </div>
+        <div class="grid features">
+          <article class="feature">
+            <div class="feature-icon">🎯</div>
+            <h3>Sub-goals you control</h3>
+            <p>Set any comfortable level — 30, 50, 100, whatever. Hit 1% and you've already won. Hit 100% and the daily goal feels easy.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">⏱️</div>
+            <h3>Time your push</h3>
+            <p>Start a session and watch the clock. See your comments-per-hour pace and exactly how long the goal takes.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">🗂️</div>
+            <h3>Platforms tracked</h3>
+            <p>x.com is your focus, yt.com and ig.com tracked too. Every comment counted where it happened.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">🔒</div>
+            <h3>100% local</h3>
+            <p>Your data lives in a local SQLite database on your Mac. No accounts, no cloud, no tracking.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">📈</div>
+            <h3>History & insight</h3>
+            <p>Last 7 days at a glance plus a full session log — see your best days and your pace over time.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">⌨️</div>
+            <h3>Fast by default</h3>
+            <p>⌘N adds a comment, ⇧⌘S starts a session. Keep the window open and chain posts without losing flow.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="platforms" class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>One focus, three platforms</h2>
+          <p>Comment Tracker knows where you post.</p>
+        </div>
+        <div class="grid platforms">
+          <div class="platform-card focus">
+            <span class="focus-tag">FOCUS</span>
+            <span class="platform-dot x big"></span>
+            <h3>X</h3>
+            <p class="handle">x.com</p>
+            <span class="tier">Primary</span>
+          </div>
+          <div class="platform-card">
+            <span class="platform-dot yt big"></span>
+            <h3>YouTube</h3>
+            <p class="handle">yt.com</p>
+            <span class="tier">Other</span>
+          </div>
+          <div class="platform-card">
+            <span class="platform-dot ig big"></span>
+            <h3>Instagram</h3>
+            <p class="handle">ig.com</p>
+            <span class="tier">Secondary</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>How it works</h2>
+          <p>Four steps. A minute to set up.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <h3>Set your goal + sub-goal</h3>
+            <p>Daily goal 313 by default. Sub-goal defaults to 30 — change it to whatever feels right today.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <h3>Start a session</h3>
+            <p>Hit start and the timer runs. Your pace updates live as you work.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <h3>Add a comment per post</h3>
+            <p>Pick the platform, note what you posted, save. Keep the window open to chain comments.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">4</span>
+            <h3>Watch milestones</h3>
+            <p>1% is a win. 25% is a wave. 100% of your sub-goal is the day done right.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>What's next</h2>
+          <p>The roadmap is public — contributions welcome.</p>
+        </div>
+        <div class="roadmap-grid">
+          <div class="roadmap-col">
+            <h4>v1.1 — Motivation</h4>
+            <ul>
+              <li>Streaks (consecutive days)</li>
+              <li>Daily reminders</li>
+              <li>Milestone celebrations</li>
+              <li>Widgets</li>
+            </ul>
+          </div>
+          <div class="roadmap-col">
+            <h4>v1.2 — Insight</h4>
+            <ul>
+              <li>All-time platform breakdown</li>
+              <li>Best time-of-day analysis</li>
+              <li>CSV / JSON export</li>
+              <li>Goal trend line</li>
+            </ul>
+          </div>
+          <div class="roadmap-col">
+            <h4>v1.3 — Power</h4>
+            <ul>
+              <li>Menu bar mini-widget</li>
+              <li>Quick add from anywhere</li>
+              <li>Comment search & tags</li>
+              <li>iCloud sync</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/theikbhal/comment-tracker/releases/latest" target="_blank" rel="noopener">Get Comment Tracker</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>Comment Tracker · Swift + SwiftUI + SQLite</span>
+      <span>
+        <a href="https://github.com/theikbhal/comment-tracker" target="_blank" rel="noopener">GitHub</a>
+        ·
+        <a href="https://github.com/theikbhal/comment-tracker/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+        ·
+        <a href="https://github.com/theikbhal/comment-tracker/releases" target="_blank" rel="noopener">Releases</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>
