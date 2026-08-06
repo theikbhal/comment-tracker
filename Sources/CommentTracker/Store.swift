@@ -9,11 +9,17 @@ final class Store: ObservableObject {
 
     @Published var goal: Int = 313
     @Published var subGoal: Int = 30
+    @Published var peopleGoal: Int = 313
     @Published var isOnboarded: Bool = false
     @Published var comments: [Comment] = []
     @Published var sessions: [Session] = []
     @Published var activeSession: Session?
     @Published var now = Date()
+
+    @Published var people: [Person] = []
+    @Published var peopleLinks: [PersonLink] = []
+    @Published var peopleComments: [PersonComment] = []
+    @Published var personToDetail: Person?
 
     private var timer: Timer?
 
@@ -34,6 +40,9 @@ final class Store: ObservableObject {
         if let s = settings["subGoal"].flatMap(Int.init), s > 0 {
             subGoal = s
         }
+        if let p = settings["peopleGoal"].flatMap(Int.init), p > 0 {
+            peopleGoal = p
+        }
         isOnboarded = settings["onboarded"] == "true"
         refresh()
     }
@@ -42,6 +51,9 @@ final class Store: ObservableObject {
         comments = loadComments()
         sessions = loadSessions()
         activeSession = sessions.first { $0.isActive }
+        people = loadPeople()
+        peopleLinks = loadPersonLinks()
+        peopleComments = loadPersonComments()
     }
 
     // MARK: - Onboarding
@@ -61,6 +73,11 @@ final class Store: ObservableObject {
     func updateSubGoal(_ newSubGoal: Int) {
         subGoal = max(1, newSubGoal)
         db.setSetting("subGoal", "\(subGoal)")
+    }
+
+    func updatePeopleGoal(_ newGoal: Int) {
+        peopleGoal = max(1, newGoal)
+        db.setSetting("peopleGoal", "\(peopleGoal)")
     }
 
     // MARK: - Comments
@@ -96,6 +113,110 @@ final class Store: ObservableObject {
     func endSession() {
         guard let s = activeSession else { return }
         _ = db.execute("UPDATE sessions SET ended_at = ? WHERE id = ?", [Date().timeIntervalSince1970, s.id])
+        refresh()
+    }
+
+    // MARK: - People
+
+    var totalPeople: Int { people.count }
+
+    func peopleForStage(_ stage: PersonStage) -> [Person] {
+        people
+            .filter { $0.stage == stage }
+            .sorted { $0.position < $1.position }
+    }
+
+    func personByID(_ id: Int) -> Person? {
+        people.first { $0.id == id }
+    }
+
+    func links(for personID: Int) -> [PersonLink] {
+        peopleLinks.filter { $0.personId == personID }
+    }
+
+    func comments(for personID: Int) -> [PersonComment] {
+        peopleComments
+            .filter { $0.personId == personID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addPerson(name: String, brief: String = "", stage: PersonStage = .holding) {
+        let now = Date().timeIntervalSince1970
+        let position = peopleForStage(stage).count
+        _ = db.execute(
+            "INSERT INTO people (name, brief, description, stage, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [name, brief, "", stage.rawValue, position, now, now]
+        )
+        refresh()
+    }
+
+    func updatePerson(id: Int, name: String? = nil, brief: String? = nil, description: String? = nil, stage: PersonStage? = nil) {
+        guard let p = personByID(id) else { return }
+        let newStage = stage ?? p.stage
+        _ = db.execute(
+            "UPDATE people SET name = ?, brief = ?, description = ?, stage = ?, updated_at = ? WHERE id = ?",
+            [name ?? p.name, brief ?? p.brief, description ?? p.description, newStage.rawValue, Date().timeIntervalSince1970, id]
+        )
+        if let stage, stage != p.stage {
+            reindexColumn(p.stage)
+            reindexColumn(stage)
+        }
+        refresh()
+    }
+
+    func deletePerson(_ id: Int) {
+        _ = db.execute("DELETE FROM people_links WHERE person_id = ?", [id])
+        _ = db.execute("DELETE FROM people_comments WHERE person_id = ?", [id])
+        _ = db.execute("DELETE FROM people WHERE id = ?", [id])
+        refresh()
+    }
+
+    func movePerson(_ id: Int, to stage: PersonStage, at index: Int) {
+        guard let p = personByID(id) else { return }
+        let fromStage = p.stage
+        var target = peopleForStage(stage)
+        target.removeAll { $0.id == id }
+        let clamped = max(0, min(index, target.count))
+        target.insert(p, at: clamped)
+        writeOrder(target, stage: stage)
+        if fromStage != stage {
+            writeOrder(peopleForStage(fromStage).filter { $0.id != id }, stage: fromStage)
+        }
+        refresh()
+    }
+
+    func reindexColumn(_ stage: PersonStage) {
+        writeOrder(peopleForStage(stage), stage: stage)
+    }
+
+    private func writeOrder(_ ordered: [Person], stage: PersonStage) {
+        for (i, person) in ordered.enumerated() {
+            _ = db.execute("UPDATE people SET position = ?, updated_at = ? WHERE id = ?", [i, Date().timeIntervalSince1970, person.id])
+        }
+    }
+
+    func addPersonLink(personID: Int, label: String, url: String, kind: PersonLinkKind) {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO people_links (person_id, label, url, kind) VALUES (?, ?, ?, ?)",
+            [personID, label, trimmed, kind.rawValue]
+        )
+        refresh()
+    }
+
+    func deletePersonLink(_ id: Int) {
+        _ = db.execute("DELETE FROM people_links WHERE id = ?", [id])
+        refresh()
+    }
+
+    func addPersonComment(personID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO people_comments (person_id, body, created_at) VALUES (?, ?, ?)",
+            [personID, trimmed, Date().timeIntervalSince1970]
+        )
         refresh()
     }
 
@@ -221,6 +342,65 @@ final class Store: ObservableObject {
                 endedAt: (row["ended_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
                 goal: row["goal"] as? Int ?? 0,
                 commentsAdded: row["comments_added"] as? Int ?? 0
+            )
+        }
+    }
+
+    private func loadPeople() -> [Person] {
+        db.query("SELECT * FROM people ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let stageRaw = row["stage"] as? String,
+                let stage = PersonStage(rawValue: stageRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Person(
+                id: id,
+                name: name,
+                brief: row["brief"] as? String ?? "",
+                description: row["description"] as? String ?? "",
+                stage: stage,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadPersonLinks() -> [PersonLink] {
+        db.query("SELECT * FROM people_links").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let personID = row["person_id"] as? Int,
+                let url = row["url"] as? String,
+                let kindRaw = row["kind"] as? String,
+                let kind = PersonLinkKind(rawValue: kindRaw)
+            else { return nil }
+            return PersonLink(
+                id: id,
+                personId: personID,
+                label: row["label"] as? String ?? "",
+                url: url,
+                kind: kind
+            )
+        }
+    }
+
+    private func loadPersonComments() -> [PersonComment] {
+        db.query("SELECT * FROM people_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let personID = row["person_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return PersonComment(
+                id: id,
+                personId: personID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
             )
         }
     }

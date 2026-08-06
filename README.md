@@ -15,6 +15,8 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 - **Pace** — comments per hour and live progress
 - **Milestones** — hit 1% of your sub-goal and you've already won; keep going through 5%, 10%, 25%, 50%, 75%, 100%
 - **History** — last-7-days chart + all past sessions
+- **People board (Trello-style)** — track up to 313 people across a **Holding** list and **Check** lists (Daily / Weekly / Monthly / Quarterly / Yearly), drag cards between lists and reorder
+- **Person cards with details** — double-click a card for description, activity comments, and openable links (X, YouTube, Instagram, videos, websites, anything)
 - **Local SQLite storage** — nothing leaves the machine
 - **First-run onboarding**, Help screen with settings, and keyboard shortcuts
 - Custom app icon
@@ -64,7 +66,7 @@ scripts/make_icon.swift                # renders the app icon
 Resources/Info.plist                   # app bundle metadata
 Sources/CommentTracker/
   CommentTrackerApp.swift              # @main entry + menu commands
-  Models.swift                         # Platform, Comment, Session, Milestone
+  Models.swift                         # Platform, Comment, Session, Milestone, Person…
   DatabaseManager.swift                # SQLite3 wrapper + schema migration
   Store.swift                          # observable app state + business logic
   Views/                               # SwiftUI screens

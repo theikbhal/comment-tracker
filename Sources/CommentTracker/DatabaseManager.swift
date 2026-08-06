@@ -44,6 +44,29 @@ final class DatabaseManager {
             ended_at REAL,
             goal INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS people (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            brief TEXT,
+            description TEXT,
+            stage TEXT NOT NULL DEFAULT 'holding',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS people_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            person_id INTEGER NOT NULL,
+            label TEXT,
+            url TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'other'
+        );
+        CREATE TABLE IF NOT EXISTS people_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            person_id INTEGER NOT NULL,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
         """
         for statement in schema.split(separator: ";").map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) })
         where !statement.isEmpty {

@@ -1,12 +1,13 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, history, help
+    case today, people, history, help
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .today: return "Today"
+        case .people: return "People"
         case .history: return "History"
         case .help: return "Help"
         }
@@ -15,6 +16,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .today: return "target"
+        case .people: return "person.2"
         case .history: return "chart.bar.xaxis"
         case .help: return "questionmark.circle"
         }
@@ -68,6 +70,7 @@ struct ContentView: View {
     private func detail(for item: SidebarItem) -> some View {
         switch item {
         case .today: TodayView()
+        case .people: PeopleView()
         case .history: HistoryView()
         case .help: HelpView()
         }

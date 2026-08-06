@@ -7,6 +7,7 @@
 - [x] Pace (comments/hour) + live progress
 - [x] Milestones (1% → 100% of sub-goal)
 - [x] History: last-7-days chart + session log
+- [x] People board: Holding + Check lists (daily/weekly/monthly/quarterly/yearly), drag & drop, card details with comments + openable links
 - [x] Onboarding + Help with settings
 - [x] Local SQLite storage
 - [x] App icon + bundle

@@ -4,6 +4,7 @@ struct HelpView: View {
     @EnvironmentObject var store: Store
     @State private var goalText: String = ""
     @State private var subGoalText: String = ""
+    @State private var peopleGoalText: String = ""
     @State private var showDataPath = false
 
     var body: some View {
@@ -19,6 +20,7 @@ struct HelpView: View {
 
                 goalCard
                 subGoalCard
+                peopleGoalCard
                 howToCard
                 shortcutsCard
                 dataCard
@@ -31,6 +33,7 @@ struct HelpView: View {
         .onAppear {
             goalText = "\(store.goal)"
             subGoalText = "\(store.subGoal)"
+            peopleGoalText = "\(store.peopleGoal)"
         }
     }
 
@@ -94,6 +97,30 @@ struct HelpView: View {
             Text("Current sub-goal: \(store.subGoal) comments")
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
+        }
+        .card()
+    }
+
+    private var peopleGoalCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("People Goal", systemImage: "person.2")
+                .font(.headline)
+            Text("How many people you're tracking on the People board. Default 313.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                TextField("People goal", text: $peopleGoalText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                Button("Save") {
+                    store.updatePeopleGoal(Int(peopleGoalText) ?? 313)
+                }
+                .buttonStyle(.borderedProminent)
+                Spacer()
+                Text("Tracking \(store.totalPeople)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .card()
     }

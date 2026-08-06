@@ -110,3 +110,109 @@ enum SubGoalPreset: Int, CaseIterable, Identifiable {
 
     var label: String { "\(rawValue)" }
 }
+
+// MARK: - People (Trello-style board)
+
+enum PersonStage: String, CaseIterable, Identifiable {
+    case holding = "holding"
+    case daily = "daily"
+    case weekly = "weekly"
+    case monthly = "monthly"
+    case quarterly = "quarterly"
+    case yearly = "yearly"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .holding: return "Holding"
+        case .daily: return "Daily"
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
+        case .quarterly: return "Quarterly"
+        case .yearly: return "Yearly"
+        }
+    }
+
+    var group: String {
+        self == .holding ? "Holding" : "Check"
+    }
+
+    var isHolding: Bool { self == .holding }
+
+    var symbol: String {
+        switch self {
+        case .holding: return "pause.circle"
+        case .daily: return "sun.max"
+        case .weekly: return "calendar"
+        case .monthly: return "calendar.badge.checkmark"
+        case .quarterly: return "calendar.badge.clock"
+        case .yearly: return "calendar.badge.exclamationmark"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .holding: return .gray
+        case .daily: return .orange
+        case .weekly: return .yellow
+        case .monthly: return .teal
+        case .quarterly: return .blue
+        case .yearly: return .purple
+        }
+    }
+}
+
+struct Person: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var brief: String
+    var description: String
+    var stage: PersonStage
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+enum PersonLinkKind: String, CaseIterable, Identifiable {
+    case x, youtube, instagram, video, website, other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .x: return "X"
+        case .youtube: return "YouTube"
+        case .instagram: return "Instagram"
+        case .video: return "Video"
+        case .website: return "Website"
+        case .other: return "Other"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .x: return "xmark.circle"
+        case .youtube: return "play.rectangle"
+        case .instagram: return "camera"
+        case .video: return "film"
+        case .website: return "globe"
+        case .other: return "link"
+        }
+    }
+}
+
+struct PersonLink: Identifiable {
+    let id: Int
+    var personId: Int
+    var label: String
+    var url: String
+    var kind: PersonLinkKind
+}
+
+struct PersonComment: Identifiable {
+    let id: Int
+    var personId: Int
+    var body: String
+    var createdAt: Date
+}
