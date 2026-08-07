@@ -2,6 +2,12 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.12.2]
+
+### Added
+- **Blog**: full read view for each post (click a card or hit View). The view sheet shows the whole body, tags, status, and dates, with Publish/Unpublish, Edit, and Delete actions.
+- **Blog** cards now show explicit View / Edit / Publish / Delete buttons; pagination shows how many posts remain.
+
 ## [v1.12.1]
 
 ### Changed

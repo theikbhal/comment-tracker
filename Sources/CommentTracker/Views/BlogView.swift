@@ -8,6 +8,7 @@ struct BlogView: View {
     @State private var searchText = ""
     @State private var filter: BlogPostStatus?
     @State private var editingPost: BlogPost?
+    @State private var viewingPost: BlogPost?
     @State private var showingNewPost = false
     @State private var loaded = blogPageSize
 
@@ -32,9 +33,12 @@ struct BlogView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     ForEach(shownPosts) { post in
-                        BlogPostCardView(post: post) {
-                            editingPost = post
-                        }
+                        BlogPostCardView(
+                            post: post,
+                            onOpen: { viewingPost = post },
+                            onEdit: { editingPost = post },
+                            onDelete: { store.deleteBlogPost(post.id) }
+                        )
                     }
                     if allPosts.isEmpty {
                         emptyState
@@ -42,7 +46,7 @@ struct BlogView: View {
                         Button {
                             loaded += blogPageSize
                         } label: {
-                            Text("Show older posts")
+                            Text("Show older posts (\(allPosts.count - loaded) remaining)")
                                 .font(.subheadline.weight(.semibold))
                         }
                         .buttonStyle(.plain)
@@ -62,6 +66,10 @@ struct BlogView: View {
         }
         .sheet(item: $editingPost) { post in
             BlogPostEditSheet(post: post)
+                .environmentObject(store)
+        }
+        .sheet(item: $viewingPost) { post in
+            BlogPostViewSheet(post: post)
                 .environmentObject(store)
         }
     }
@@ -153,7 +161,9 @@ struct BlogView: View {
 struct BlogPostCardView: View {
     @EnvironmentObject var store: Store
     let post: BlogPost
+    var onOpen: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -199,12 +209,53 @@ struct BlogPostCardView: View {
                     }
                 }
             }
+            HStack(spacing: 14) {
+                Text("\(post.body.count) chars")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+                Spacer()
+                Button {
+                    onOpen?()
+                } label: {
+                    Label("View", systemImage: "eye")
+                }
+                .buttonStyle(.borderless)
+                .font(.caption)
+                .help("Read the full post")
+                Button {
+                    onEdit?()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .font(.caption)
+                .help("Edit this post")
+                Button {
+                    store.setBlogPostStatus(post.id, post.status == .published ? .draft : .published)
+                } label: {
+                    Label(post.status == .published ? "Unpublish" : "Publish", systemImage: post.status == .published ? "arrow.uturn.backward" : "paperplane")
+                }
+                .buttonStyle(.borderless)
+                .font(.caption)
+                .help(post.status == .published ? "Unpublish" : "Publish")
+                Button(role: .destructive) {
+                    onDelete?()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(.borderless)
+                .font(.caption)
+                .help("Delete this post")
+            }
         }
         .padding(12)
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.gray.opacity(0.16), lineWidth: 1))
         .contentShape(RoundedRectangle(cornerRadius: 14))
+        .onTapGesture { onOpen?() }
         .contextMenu {
+            Button { onOpen?() } label: { Label("View", systemImage: "eye") }
             Button { onEdit?() } label: { Label("Edit", systemImage: "pencil") }
             Button {
                 store.setBlogPostStatus(post.id, post.status == .published ? .draft : .published)
@@ -213,9 +264,109 @@ struct BlogPostCardView: View {
             }
             Divider()
             Button(role: .destructive) {
-                store.deleteBlogPost(post.id)
+                onDelete?()
             } label: {
                 Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+}
+
+struct BlogPostViewSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var store: Store
+    let post: BlogPost
+    @State private var showingEdit = false
+
+    private var fresh: BlogPost? {
+        store.blogPosts.first { $0.id == post.id }
+    }
+
+    var body: some View {
+        let current = fresh ?? post
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 8) {
+                        Text(current.status.displayName)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(current.status.color, in: Capsule())
+                        Spacer()
+                        Text(current.status == .published && current.publishedAt != nil
+                             ? "Published \(current.publishedAt!.formatted(date: .long, time: .shortened))"
+                             : "Created \(current.createdAt.formatted(date: .long, time: .shortened))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(current.title)
+                        .font(.title2.bold())
+                    if !current.tagList.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(current.tagList, id: \.self) { tag in
+                                Text("#\(tag)")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.blue)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(Color.blue.opacity(0.1), in: Capsule())
+                            }
+                        }
+                    }
+                    Divider()
+                    if current.body.isEmpty {
+                        Text("No body yet.")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 30)
+                    } else {
+                        Text(current.body)
+                            .font(.body)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    Text("Last edited \(current.updatedAt.formatted(date: .long, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(20)
+            }
+            Divider()
+            HStack(spacing: 12) {
+                Button {
+                    store.setBlogPostStatus(current.id, current.status == .published ? .draft : .published)
+                } label: {
+                    Label(current.status == .published ? "Unpublish" : "Publish", systemImage: current.status == .published ? "arrow.uturn.backward" : "paperplane")
+                }
+                .buttonStyle(.bordered)
+                Button(role: .destructive) {
+                    store.deleteBlogPost(current.id)
+                    dismiss()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                Spacer()
+                Button("Edit") {
+                    showingEdit = true
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                Button("Close") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding(14)
+        }
+        .frame(width: 580, height: 520)
+        .sheet(isPresented: $showingEdit) {
+            if let freshPost = store.blogPosts.first(where: { $0.id == current.id }) {
+                BlogPostEditSheet(post: freshPost)
+                    .environmentObject(store)
             }
         }
     }
