@@ -33,6 +33,7 @@ struct HelpView: View {
                 deepWorkCard
                 scheduleCard
                 mindMapCard
+                blogCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -242,6 +243,17 @@ struct HelpView: View {
             Label("Mini Mind Map — visual idea webs", systemImage: "point.3.connected.trianglepath.dotted")
                 .font(.headline)
             Text("Create maps and add child nodes to any node (via + or right-click). Drag nodes to rearrange them; lines follow automatically. Double-click a node to rename or recolor it. Right-click to add a child, change color, or delete a whole branch.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var blogCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Blog — write and publish posts", systemImage: "newspaper.fill")
+                .font(.headline)
+            Text("Keep your writing here: title, body, and comma-separated tags. Draft or publish with one click (publishing stamps the date), filter by status, search by title/body/tags.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

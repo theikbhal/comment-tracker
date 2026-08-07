@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -15,6 +15,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .projects: return "Projects"
         case .schedule: return "Schedule"
         case .mindmap: return "Mind Map"
+        case .blog: return "Blog"
         case .tracker: return "Tracker"
         case .people: return "People"
         case .thoughts: return "Thoughts"
@@ -43,6 +44,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .projects: return "shippingbox.fill"
         case .schedule: return "calendar.badge.clock"
         case .mindmap: return "point.3.connected.trianglepath.dotted"
+        case .blog: return "newspaper.fill"
         case .tracker: return "checklist"
         case .people: return "person.2"
         case .thoughts: return "lightbulb"
@@ -129,6 +131,7 @@ struct ContentView: View {
         case .projects: ProjectTrackerView()
         case .schedule: ScheduleView()
         case .mindmap: MiniMindMapView()
+        case .blog: BlogView()
         case .tracker: TrackerView()
         case .people: PeopleView()
         case .thoughts: ThoughtsView()

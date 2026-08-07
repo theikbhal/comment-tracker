@@ -40,6 +40,7 @@ final class Store: ObservableObject {
     @Published var urgent: [UrgentItem] = []
     @Published var mindMaps: [MindMap] = []
     @Published var mindMapNodes: [MindMapNode] = []
+    @Published var blogPosts: [BlogPost] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -103,6 +104,7 @@ final class Store: ObservableObject {
         urgent = loadUrgent()
         mindMaps = loadMindMaps()
         mindMapNodes = loadMindMapNodes()
+        blogPosts = loadBlogPosts()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -1025,6 +1027,59 @@ final class Store: ObservableObject {
         for nodeID in toDelete {
             _ = db.execute("DELETE FROM mindmap_nodes WHERE id = ?", [nodeID])
         }
+        refresh()
+    }
+
+    // MARK: - Blog posts
+
+    func blogPost(_ p: BlogPost, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        if p.title.lowercased().contains(q) { return true }
+        if p.body.lowercased().contains(q) { return true }
+        return p.tags.lowercased().contains(q)
+    }
+
+    func addBlogPost(title: String, body: String = "", tags: String = "", status: BlogPostStatus = .draft) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO blog_posts (title, body, status, tags, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, body, status.rawValue, tags, now, now, status == .published ? now : nil]
+        )
+        refresh()
+    }
+
+    func updateBlogPost(id: Int, title: String? = nil, body: String? = nil, tags: String? = nil, status: BlogPostStatus? = nil) {
+        guard let post = blogPosts.first(where: { $0.id == id }) else { return }
+        let newStatus = status ?? post.status
+        _ = db.execute(
+            "UPDATE blog_posts SET title = ?, body = ?, status = ?, tags = ?, updated_at = ? WHERE id = ?",
+            [title ?? post.title, body ?? post.body, newStatus.rawValue, tags ?? post.tags, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func setBlogPostStatus(_ id: Int, _ status: BlogPostStatus) {
+        guard let post = blogPosts.first(where: { $0.id == id }) else { return }
+        let now = Date().timeIntervalSince1970
+        if status == .published && post.status != .published {
+            _ = db.execute(
+                "UPDATE blog_posts SET status = ?, published_at = ?, updated_at = ? WHERE id = ?",
+                [status.rawValue, now, now, id]
+            )
+        } else if status == .draft {
+            _ = db.execute(
+                "UPDATE blog_posts SET status = ?, published_at = NULL, updated_at = ? WHERE id = ?",
+                [status.rawValue, now, id]
+            )
+        }
+        refresh()
+    }
+
+    func deleteBlogPost(_ id: Int) {
+        _ = db.execute("DELETE FROM blog_posts WHERE id = ?", [id])
         refresh()
     }
 
@@ -1986,6 +2041,31 @@ final class Store: ObservableObject {
                 y: y,
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadBlogPosts() -> [BlogPost] {
+        db.query("SELECT * FROM blog_posts ORDER BY updated_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let body = row["body"] as? String,
+                let statusRaw = row["status"] as? String,
+                let status = BlogPostStatus(rawValue: statusRaw),
+                let tags = row["tags"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return BlogPost(
+                id: id,
+                title: title,
+                body: body,
+                status: status,
+                tags: tags,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated),
+                publishedAt: (row["published_at"] as? Double).map { Date(timeIntervalSince1970: $0) }
             )
         }
     }

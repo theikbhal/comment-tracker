@@ -619,6 +619,41 @@ struct MindMapNode: Identifiable, Equatable {
     var isRoot: Bool { parentId == nil }
 }
 
+// MARK: - Blog posts
+
+enum BlogPostStatus: String, CaseIterable {
+    case draft, published
+
+    var displayName: String {
+        switch self {
+        case .draft: return "Draft"
+        case .published: return "Published"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .draft: return .gray
+        case .published: return .green
+        }
+    }
+}
+
+struct BlogPost: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var body: String
+    var status: BlogPostStatus
+    var tags: String
+    var createdAt: Date
+    var updatedAt: Date
+    var publishedAt: Date?
+
+    var tagList: [String] {
+        tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

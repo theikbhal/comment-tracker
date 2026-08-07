@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.11.0]
+
+### Added
+- New **Blog** tab: write and manage posts. Title, body, and comma-separated tags; Draft/Published status with a stamped publish date; filter by status, search across title/body/tags.
+
 ## [v1.10.0]
 
 ### Added
