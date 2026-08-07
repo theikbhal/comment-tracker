@@ -4,12 +4,6 @@ import AppKit
 struct DeepWorkView: View {
     @EnvironmentObject var store: Store
 
-    @State private var selectedMinutes = 60
-    @State private var secondsLeft = 0
-    @State private var isRunning = false
-    @State private var runningSince = Date()
-    @State private var tickerTask: Task<Void, Never>?
-
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -27,9 +21,6 @@ struct DeepWorkView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .onAppear {
-            if secondsLeft == 0 { reset() }
-        }
     }
 
     private var header: some View {
@@ -37,11 +28,19 @@ struct DeepWorkView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Deep Work")
                     .font(.title.bold())
-                Text("A dedicated block. Phones down, one thing.")
+                Text("A dedicated block. Keeps running while you switch tabs.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            Button {
+                store.showFloatingTimer = true
+                FloatingTimerWindow.shared.show(store: store)
+            } label: {
+                Label("Floating timer", systemImage: "pin")
+            }
+            .buttonStyle(.bordered)
+            .help("Show a small always-on-top timer window")
         }
         .padding(16)
     }
@@ -52,34 +51,34 @@ struct DeepWorkView: View {
                 Circle()
                     .stroke(Color.gray.opacity(0.15), lineWidth: 14)
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: store.deepWorkProgress)
                     .stroke(progressColor.gradient, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 4) {
-                    Text(timeString(secondsLeft))
+                    Text(timeString(store.deepWorkSecondsLeft))
                         .font(.system(size: 54, weight: .bold, design: .monospaced))
-                    Text(isRunning ? "Deep work in progress" : (secondsLeft == 0 ? "Ready" : "Paused"))
+                    Text(store.deepWorkRunning ? "Deep work in progress" : (store.deepWorkSecondsLeft == 0 ? "Ready" : "Paused"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             .frame(width: 220, height: 220)
 
-            if !isRunning {
-                Picker("Block length", selection: $selectedMinutes) {
+            if !store.deepWorkRunning {
+                Picker("Block length", selection: minutesBinding) {
                     ForEach(deepWorkPresets, id: \.self) { m in
                         Text("\(m) min").tag(m)
                     }
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 460)
-                .disabled(secondsLeft != 0)
+                .disabled(store.deepWorkSecondsLeft != 0)
             }
 
             HStack(spacing: 14) {
-                if isRunning {
+                if store.deepWorkRunning {
                     Button {
-                        pause()
+                        store.pauseDeepWorkTimer()
                     } label: {
                         Label("Pause", systemImage: "pause.fill")
                             .frame(minWidth: 90)
@@ -88,16 +87,16 @@ struct DeepWorkView: View {
                     .tint(.orange)
                 } else {
                     Button {
-                        start()
+                        store.startDeepWorkTimer()
                     } label: {
-                        Label(secondsLeft == 0 ? "Start" : "Resume", systemImage: "play.fill")
+                        Label(store.deepWorkSecondsLeft == 0 ? "Start" : "Resume", systemImage: "play.fill")
                             .frame(minWidth: 90)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.indigo)
                 }
                 Button {
-                    reset()
+                    store.resetDeepWorkTimer()
                 } label: {
                     Label("Reset", systemImage: "arrow.counterclockwise")
                         .frame(minWidth: 90)
@@ -108,6 +107,13 @@ struct DeepWorkView: View {
         .padding(24)
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.gray.opacity(0.16), lineWidth: 1))
+    }
+
+    private var minutesBinding: Binding<Int> {
+        Binding(
+            get: { store.deepWorkSelectedMinutes },
+            set: { store.deepWorkSelectedMinutes = $0 }
+        )
     }
 
     private var statsRow: some View {
@@ -165,66 +171,11 @@ struct DeepWorkView: View {
         }
     }
 
-    // MARK: - Timer logic
-
-    private var progress: Double {
-        guard selectedMinutes > 0 else { return 0 }
-        let total = Double(selectedMinutes * 60)
-        return Double(secondsLeft) / total
-    }
-
     private var progressColor: Color {
-        if secondsLeft <= 60 { return .red }
-        if secondsLeft <= 300 { return .orange }
+        let s = store.deepWorkSecondsLeft
+        if s <= 60 { return .red }
+        if s <= 300 { return .orange }
         return .indigo
-    }
-
-    private func start() {
-        if secondsLeft == 0 {
-            secondsLeft = selectedMinutes * 60
-        }
-        isRunning = true
-        runningSince = Date()
-        runTicker()
-    }
-
-    private func pause() {
-        isRunning = false
-        tickerTask?.cancel()
-        tickerTask = nil
-    }
-
-    private func reset() {
-        pause()
-        secondsLeft = 0
-        selectedMinutes = 60
-    }
-
-    private func runTicker() {
-        tickerTask?.cancel()
-        tickerTask = Task { @MainActor in
-            while !Task.isCancelled && isRunning {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard !Task.isCancelled else { return }
-                let elapsed = Date().timeIntervalSince(runningSince)
-                let newValue = max(0, secondsLeft - Int(elapsed))
-                secondsLeft = newValue
-                if newValue <= 0 {
-                    finish()
-                    return
-                }
-            }
-        }
-    }
-
-    private func finish() {
-        isRunning = false
-        tickerTask?.cancel()
-        tickerTask = nil
-        NSSound(named: "Glass")?.play()
-        let finished = selectedMinutes
-        store.completeDeepWork(minutes: finished)
-        secondsLeft = 0
     }
 
     private func timeString(_ total: Int) -> String {

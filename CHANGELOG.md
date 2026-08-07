@@ -2,6 +2,13 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.18.0]
+
+### Fixed
+- **Pomodoro & Deep Work now survive tab switches**: the timers live in the shared app state, so starting a session and navigating anywhere keeps counting.
+- **Floating timer**: "Floating timer" button (Pomodoro + Deep Work headers) opens a small always-on-top window showing whichever timer is active, with Start/Pause/Reset. It stays above other windows and on every Space.
+- **Completion notifications**: a local notification (plus sound) fires when a Pomodoro session or Deep Work block ends — even if you're on another tab or the app isn't focused.
+
 ## [v1.16.2]
 
 ### Added

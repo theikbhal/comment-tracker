@@ -226,7 +226,7 @@ struct HelpView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Deep Work — a dedicated block", systemImage: "brain.head.profile")
                 .font(.headline)
-            Text("A single focus timer for longer blocks (15–120 min). Phones down, one thing. When a block completes, a Win is logged automatically so your progress is recorded.")
+            Text("A single focus timer for longer blocks (15–120 min). Phones down, one thing. It keeps running while you switch tabs, and you can pin a floating always-on-top window. When a block completes, a Win is logged and a notification fires.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -467,7 +467,7 @@ private var cardsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Pomodoro", systemImage: "timer")
                 .font(.headline)
-            Text("Classic focus timer — Focus 25 / Short break 5 / Long break 15. Start with Space, auto-switches to a break when a focus session ends, and counts your sessions.")
+            Text("Classic focus timer — Focus 25 / Short break 5 / Long break 15. Start with Space. It keeps running while you switch tabs, and you can pin a floating always-on-top window. A notification + sound fires when a session ends, and it auto-switches to a break.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -65,12 +65,32 @@ final class Store: ObservableObject {
     @Published var trackerEntries: [TrackerEntry] = []
     @Published var trackerToDetail: Tracker?
 
+    // Pomodoro timer (persists across tabs)
+    @Published var pomodoroMode: PomodoroMode = .focus
+    @Published var pomodoroRunning = false
+    @Published var pomodoroEndTime: Date?
+    @Published var pomodoroRemaining = PomodoroMode.focus.minutes * 60
+    @Published var pomodoroSessionID: Int?
+    @Published var pomodoroStartedAt = Date()
+
+    // Deep work timer (persists across tabs)
+    @Published var deepWorkRunning = false
+    @Published var deepWorkSecondsLeft = 0
+    @Published var deepWorkSelectedMinutes = 60
+    @Published var deepWorkRunningSince = Date()
+
+    // Floating timer window
+    @Published var showFloatingTimer = false
+
     private var timer: Timer?
 
     init() {
         load()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.now = Date() }
+            Task { @MainActor in
+                self?.now = Date()
+                self?.tickTimers()
+            }
         }
     }
 
@@ -1512,6 +1532,131 @@ final class Store: ObservableObject {
     func endPomodoro(id: Int) {
         _ = db.execute("UPDATE pomodoro_sessions SET ended_at = ? WHERE id = ?", [Date().timeIntervalSince1970, id])
         refresh()
+    }
+
+    // MARK: - Persistent timer engine (pomodoro + deep work)
+
+    var pomodoroTotal: Int { pomodoroMode.minutes * 60 }
+    var pomodoroProgress: Double { 1 - Double(pomodoroRemaining) / Double(max(1, pomodoroTotal)) }
+    var pomodoroTimeText: String {
+        String(format: "%02d:%02d", pomodoroRemaining / 60, pomodoroRemaining % 60)
+    }
+    var pomodoroColor: Color {
+        switch pomodoroMode {
+        case .focus: return .red
+        case .short: return .green
+        case .long: return .blue
+        }
+    }
+
+    var deepWorkProgress: Double {
+        guard deepWorkSelectedMinutes > 0 else { return 0 }
+        return Double(deepWorkSecondsLeft) / Double(deepWorkSelectedMinutes * 60)
+    }
+
+    func setPomodoroMode(_ mode: PomodoroMode) {
+        pomodoroMode = mode
+        resetPomodoro()
+    }
+
+    func togglePomodoro() {
+        pomodoroRunning ? pausePomodoro() : startPomodoro()
+    }
+
+    func startPomodoro() {
+        requestNotificationPermission()
+        pomodoroStartedAt = Date()
+        pomodoroEndTime = pomodoroStartedAt.addingTimeInterval(TimeInterval(pomodoroRemaining))
+        pomodoroRunning = true
+        pomodoroSessionID = addPomodoro(mode: pomodoroMode, startedAt: pomodoroStartedAt)
+    }
+
+    func pausePomodoro() {
+        pomodoroRunning = false
+    }
+
+    func resetPomodoro() {
+        pomodoroRunning = false
+        pomodoroEndTime = nil
+        pomodoroRemaining = pomodoroTotal
+        pomodoroSessionID = nil
+    }
+
+    func startDeepWorkTimer() {
+        requestNotificationPermission()
+        if deepWorkSecondsLeft == 0 {
+            deepWorkSecondsLeft = deepWorkSelectedMinutes * 60
+        }
+        deepWorkRunning = true
+        deepWorkRunningSince = Date()
+    }
+
+    func pauseDeepWorkTimer() {
+        deepWorkRunning = false
+    }
+
+    func resetDeepWorkTimer() {
+        deepWorkRunning = false
+        deepWorkSecondsLeft = 0
+        deepWorkSelectedMinutes = 60
+    }
+
+    private func tickTimers() {
+        if pomodoroRunning, let end = pomodoroEndTime {
+            let secs = Int(end.timeIntervalSinceNow)
+            if secs <= 0 {
+                completePomodoro()
+            } else {
+                pomodoroRemaining = secs
+            }
+        }
+        if deepWorkRunning {
+            let elapsed = Int(Date().timeIntervalSince(deepWorkRunningSince))
+            let newValue = max(0, deepWorkSecondsLeft - elapsed)
+            deepWorkSecondsLeft = newValue
+            if newValue <= 0 {
+                completeDeepWorkTimer()
+            }
+        }
+    }
+
+    private func completePomodoro() {
+        if let sessionID = pomodoroSessionID {
+            endPomodoro(id: sessionID)
+        }
+        refresh()
+        NSSound(named: "Glass")?.play()
+        pomodoroRunning = false
+        pomodoroEndTime = nil
+        let finishedMode = pomodoroMode
+        if finishedMode == .focus {
+            sendTimerNotification(title: "Focus complete!", body: "Nice work — time for a \(PomodoroMode.short.minutes)-minute break.")
+            pomodoroMode = .short
+        } else {
+            sendTimerNotification(title: "Break over", body: "Ready for another focus block?")
+            pomodoroMode = .focus
+        }
+        pomodoroRemaining = pomodoroTotal
+        pomodoroSessionID = nil
+    }
+
+    private func completeDeepWorkTimer() {
+        deepWorkRunning = false
+        NSSound(named: "Glass")?.play()
+        let finished = deepWorkSelectedMinutes
+        completeDeepWork(minutes: finished)
+        sendTimerNotification(title: "Deep work complete!", body: "You finished a \(finished)-minute deep work block.")
+        deepWorkSecondsLeft = 0
+    }
+
+    func sendTimerNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "timer-\(UUID().uuidString)", content: content, trigger: nil)
+        )
     }
 
     // MARK: - Sprints
