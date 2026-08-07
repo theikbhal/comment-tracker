@@ -73,6 +73,14 @@ struct CalendarView: View {
             }
             Spacer()
             Button {
+                store.requestNotificationPermission()
+                store.sendTestCalendarNotification()
+            } label: {
+                Image(systemName: "bell.badge")
+            }
+            .buttonStyle(.bordered)
+            .help("Send a test notification")
+            Button {
                 withAnimation { displayedMonth = monthStart }
                 selectedDay = dayString(Date())
             } label: {
@@ -314,6 +322,7 @@ struct CalendarEventEditSheet: View {
     @State private var time: String
     @State private var color: String
     @State private var note: String
+    @State private var reminder: Int
 
     init(event: CalendarEvent) {
         self.event = event
@@ -322,6 +331,7 @@ struct CalendarEventEditSheet: View {
         _time = State(initialValue: event.time)
         _color = State(initialValue: event.color)
         _note = State(initialValue: event.note)
+        _reminder = State(initialValue: event.reminder)
     }
 
     init(day: String) {
@@ -331,6 +341,7 @@ struct CalendarEventEditSheet: View {
         _time = State(initialValue: "")
         _color = State(initialValue: "blue")
         _note = State(initialValue: "")
+        _reminder = State(initialValue: 0)
     }
 
     var body: some View {
@@ -352,6 +363,33 @@ struct CalendarEventEditSheet: View {
                 .scrollContentBackground(.hidden)
                 .padding(6)
                 .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+            HStack(spacing: 6) {
+                Text("Remind me")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Menu {
+                    ForEach(calendarReminderPresets, id: \.self) { minutes in
+                        Button {
+                            reminder = minutes
+                        } label: {
+                            if reminder == minutes {
+                                Label(calendarReminderLabel(minutes), systemImage: "checkmark")
+                            } else {
+                                Text(calendarReminderLabel(minutes))
+                            }
+                        }
+                    }
+                } label: {
+                    Text(calendarReminderLabel(reminder))
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.12), in: Capsule())
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                Spacer()
+            }
             HStack(spacing: 6) {
                 ForEach(mindMapColorNames, id: \.self) { colorName in
                     Button {
@@ -387,10 +425,13 @@ struct CalendarEventEditSheet: View {
     }
 
     private func save() {
+        if reminder > 0 {
+            store.requestNotificationPermission()
+        }
         if let event {
-            store.updateCalendarEvent(id: event.id, title: title, time: time, color: color, note: note)
+            store.updateCalendarEvent(id: event.id, title: title, time: time, color: color, note: note, reminder: reminder)
         } else if let day {
-            store.addCalendarEvent(title: title, day: day, time: time, color: color, note: note)
+            store.addCalendarEvent(title: title, day: day, time: time, color: color, note: note, reminder: reminder)
         }
         dismiss()
     }

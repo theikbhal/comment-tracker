@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class Store: ObservableObject {
@@ -83,6 +84,7 @@ final class Store: ObservableObject {
         seedPresetsIfNeeded()
         seedSlackIfNeeded()
         refresh()
+        syncCalendarReminders()
     }
 
     func refresh() {
@@ -1184,29 +1186,120 @@ final class Store: ObservableObject {
         return calendarEvents.filter { $0.day.hasPrefix(prefix) }
     }
 
-    func addCalendarEvent(title: String, day: String, time: String = "", color: String = "blue", note: String = "") {
+    func addCalendarEvent(title: String, day: String, time: String = "", color: String = "blue", note: String = "", reminder: Int = 0) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let now = Date().timeIntervalSince1970
         _ = db.execute(
-            "INSERT INTO calendar_events (title, day, time, color, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [trimmed, day, time, color, note, now, now]
+            "INSERT INTO calendar_events (title, day, time, color, note, reminder, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, day, time, color, note, reminder, now, now]
         )
         refresh()
+        syncCalendarReminders()
     }
 
-    func updateCalendarEvent(id: Int, title: String? = nil, time: String? = nil, color: String? = nil, note: String? = nil) {
+    func updateCalendarEvent(id: Int, title: String? = nil, time: String? = nil, color: String? = nil, note: String? = nil, reminder: Int? = nil) {
         guard let event = calendarEvents.first(where: { $0.id == id }) else { return }
         _ = db.execute(
-            "UPDATE calendar_events SET title = ?, time = ?, color = ?, note = ?, updated_at = ? WHERE id = ?",
-            [title ?? event.title, time ?? event.time, color ?? event.color, note ?? event.note, Date().timeIntervalSince1970, id]
+            "UPDATE calendar_events SET title = ?, time = ?, color = ?, note = ?, reminder = ?, updated_at = ? WHERE id = ?",
+            [title ?? event.title, time ?? event.time, color ?? event.color, note ?? event.note, reminder ?? event.reminder, Date().timeIntervalSince1970, id]
         )
         refresh()
+        syncCalendarReminders()
     }
 
     func deleteCalendarEvent(_ id: Int) {
         _ = db.execute("DELETE FROM calendar_events WHERE id = ?", [id])
         refresh()
+        syncCalendarReminders()
+    }
+
+    // MARK: Calendar notifications
+
+    func requestNotificationPermission(completion: @escaping @Sendable (Bool) -> Void = { _ in }) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            DispatchQueue.main.async { completion(granted) }
+        }
+    }
+
+    func sendTestCalendarNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Comment Tracker"
+        content.body = "This is a test notification from your Calendar."
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "calendar-test-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    func syncCalendarReminders() {
+        let center = UNUserNotificationCenter.current()
+        let identifiers = calendarEvents.map { "calendar-\($0.id)" }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        center.getNotificationSettings { settings in
+            let authorized = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+            guard authorized else { return }
+            Task { @MainActor in
+                let currentCenter = UNUserNotificationCenter.current()
+                let events = self.calendarEvents.filter { $0.reminder > 0 }
+                for event in events {
+                    guard let fireDate = self.reminderFireDate(for: event), fireDate > Date() else { continue }
+                    let content = UNMutableNotificationContent()
+                    content.title = event.title
+                    content.body = self.reminderBody(for: event)
+                    content.sound = .default
+                    let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                    currentCenter.add(UNNotificationRequest(identifier: "calendar-\(event.id)", content: content, trigger: trigger))
+                }
+            }
+        }
+    }
+
+    private func reminderFireDate(for event: CalendarEvent) -> Date? {
+        guard let base = eventTimeDate(for: event) else { return nil }
+        return base.addingTimeInterval(-TimeInterval(event.reminder) * 60)
+    }
+
+    private func eventTimeDate(for event: CalendarEvent) -> Date? {
+        guard let base = dateFromDay(event.day) else { return nil }
+        let trimmed = event.time.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: base)
+        }
+        let cal = Calendar.current
+        let dayComps = cal.dateComponents([.year, .month, .day], from: base)
+        let formats = ["HH:mm", "H:mm", "h:mm a", "h:mma", "h:mm"]
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        for format in formats {
+            formatter.dateFormat = format
+            if let parsed = formatter.date(from: trimmed) {
+                var comps = cal.dateComponents([.hour, .minute], from: parsed)
+                comps.year = dayComps.year
+                comps.month = dayComps.month
+                comps.day = dayComps.day
+                return cal.date(from: comps)
+            }
+        }
+        return nil
+    }
+
+    private func reminderBody(for event: CalendarEvent) -> String {
+        var parts: [String] = []
+        if let date = dateFromDay(event.day) {
+            parts.append(date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+        }
+        if !event.time.isEmpty {
+            parts.append(event.time)
+        }
+        if !event.note.isEmpty {
+            parts.append(event.note)
+        }
+        return parts.joined(separator: " · ")
     }
 
     // MARK: - Backup & Restore
@@ -2247,6 +2340,7 @@ final class Store: ObservableObject {
                 time: row["time"] as? String ?? "",
                 color: row["color"] as? String ?? "blue",
                 note: row["note"] as? String ?? "",
+                reminder: row["reminder"] as? Int ?? 0,
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated)
             )

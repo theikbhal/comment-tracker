@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.13.1]
+
+### Added
+- **Calendar reminders**: set a reminder (5 min to 1 day before) on any event and a local notification fires at the right time — even when the app is closed or you're on another tab. Add a bell in the calendar header to send a test notification.
+
 ## [v1.13.0]
 
 ### Added

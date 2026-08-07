@@ -222,6 +222,7 @@ final class DatabaseManager {
             time TEXT NOT NULL DEFAULT '',
             color TEXT NOT NULL DEFAULT 'blue',
             note TEXT NOT NULL DEFAULT '',
+            reminder INTEGER NOT NULL DEFAULT 0,
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
@@ -305,6 +306,7 @@ final class DatabaseManager {
         }
         ensureColumn(table: "wordcards", column: "slot", definition: "INTEGER NOT NULL DEFAULT 0")
         _ = execute("UPDATE wordcards SET slot = id WHERE slot = 0")
+        ensureColumn(table: "calendar_events", column: "reminder", definition: "INTEGER NOT NULL DEFAULT 0")
     }
 
     private func ensureColumn(table: String, column: String, definition: String) {

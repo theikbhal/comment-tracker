@@ -682,8 +682,24 @@ struct CalendarEvent: Identifiable, Equatable {
     var time: String
     var color: String
     var note: String
+    var reminder: Int
     var createdAt: Date
     var updatedAt: Date
+}
+
+let calendarReminderPresets: [Int] = [0, 5, 15, 30, 60, 720, 1440]
+
+func calendarReminderLabel(_ minutes: Int) -> String {
+    switch minutes {
+    case 0: return "None"
+    case 5: return "5 min before"
+    case 15: return "15 min before"
+    case 30: return "30 min before"
+    case 60: return "1 hour before"
+    case 720: return "12 hours before"
+    case 1440: return "1 day before"
+    default: return "\(minutes) min before"
+    }
 }
 
 // MARK: - Links (simple bookmark list)

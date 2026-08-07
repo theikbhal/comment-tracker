@@ -277,7 +277,7 @@ struct HelpView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Calendar — events by day", systemImage: "calendar")
                 .font(.headline)
-            Text("A month grid of events with times and colors. Click a day to see its events in the side panel; click the + to add, click an event to edit. Navigate months, jump to Today, search events via ⌘K.")
+            Text("A month grid of events with times and colors. Click a day to see its events in the side panel; click the + to add, click an event to edit. Navigate months, jump to Today, search events via ⌘K. Set a reminder (5 min to 1 day before) and a local notification fires at the right time — even when the app isn't open.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
