@@ -15,6 +15,10 @@
 - [x] Thoughts board: three lists, single + bulk add (one per line), drag to reorder, "Pick for me" randomizer
 - [x] Wins feed: Twitter-style timeline, newest first, bookmark filter, pagination
 - [x] Backup & Restore (export / restore from Help)
+- [x] Links list (add / edit / delete / drag-reorder)
+- [x] 313 Cards: one-word deck, tap for 5 words + link dialog, group search, JSON export/import
+- [x] Pomodoro timer (25/5/15) with session count
+- [x] Sprints: 30m/1h/2h, stories → tasks, move story between sprints, auto-Win on task/sprint done
 - [x] Onboarding + Help with settings
 - [x] Release log (CHANGELOG.md)
 - [x] Local SQLite storage

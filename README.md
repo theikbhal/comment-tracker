@@ -24,6 +24,10 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 - **Global search (⌘K)** — search across tabs, trackers, people and videos
 - **Thoughts board (Trello-style)** — Long-term / This week / Doing lists; add one or a whole batch (one per line), drag to reorder, and hit **"Pick for me"** to let the dice choose when you can't decide
 - **Wins feed (Twitter-style)** — celebrate small wins as they happen (newest on top), bookmark the ones that matter and filter to them; "Show older" paginates the timeline
+- **Links** — a simple, reorderable list of links (click to open, edit/delete)
+- **313 Cards** — one-word flashcard deck; tap a card for a dialog with 5 words + a link, searchable by group name, with JSON export/import
+- **Pomodoro** — focus/break timer (25/5/15) that counts your sessions
+- **Sprints** — time-boxed (30m / 1h / 2h) sprints with stories broken into tasks; move stories between sprints; marking a task or sprint done auto-adds a Win
 - **Backup & Restore** — export the whole database to a file anytime, restore from any previous backup (Help → Backup & Restore)
 - **Local SQLite storage** — nothing leaves the machine
 - **First-run onboarding**, Help screen with settings, and keyboard shortcuts

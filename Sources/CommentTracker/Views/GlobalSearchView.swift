@@ -41,6 +41,18 @@ struct GlobalSearchView: View {
         store.wins.filter { store.win($0, matches: query) }
     }
 
+    private var cardResults: [WordCard] {
+        store.cards.filter { store.card($0, matches: query) }
+    }
+
+    private var sprintResults: [Sprint] {
+        store.sprints.filter { store.sprint($0, matches: query) }
+    }
+
+    private var linkResults: [LinkItem] {
+        store.links.filter { store.link($0, matches: query) }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             searchBar
@@ -110,7 +122,37 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty) {
+                    if cardResults.count > 0 {
+                        section("313 Cards", icon: "square.grid.3x3") {
+                            ForEach(cardResults) { c in
+                                row(icon: "square.grid.3x3", color: .purple, title: c.word, subtitle: c.groupName.isEmpty ? "313 Cards" : c.groupName) {
+                                    dismiss()
+                                    onNavigate(.cards)
+                                }
+                            }
+                        }
+                    }
+                    if sprintResults.count > 0 {
+                        section("Sprints", icon: "flag") {
+                            ForEach(sprintResults) { s in
+                                row(icon: "flag", color: .orange, title: s.name, subtitle: s.done ? "Done · Sprint" : "Open · Sprint") {
+                                    dismiss()
+                                    onNavigate(.sprints)
+                                }
+                            }
+                        }
+                    }
+                    if linkResults.count > 0 {
+                        section("Links", icon: "link") {
+                            ForEach(linkResults) { l in
+                                row(icon: "link", color: .blue, title: l.label.isEmpty ? l.url : l.label, subtitle: l.url) {
+                                    dismiss()
+                                    onNavigate(.links)
+                                }
+                            }
+                        }
+                    }
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -164,6 +206,10 @@ struct GlobalSearchView: View {
             Text("\(thoughtResults.count) thoughts")
             Text("·")
             Text("\(winResults.count) wins")
+            Text("·")
+            Text("\(cardResults.count) cards")
+            Text("·")
+            Text("\(sprintResults.count) sprints")
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -217,7 +263,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search trackers, people, videos, thoughts and tabs" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, trackers, people, videos, thoughts, wins, cards, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

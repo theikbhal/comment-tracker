@@ -28,6 +28,10 @@ struct HelpView: View {
                 trackerCard
                 thoughtsCard
                 winsCard
+                linksCard
+                cardsCard
+                pomodoroCard
+                sprintsCard
                 videosCard
                 searchCard
                 shortcutsCard
@@ -210,6 +214,50 @@ struct HelpView: View {
                 .foregroundStyle(.secondary)
             Text("• Just won something? Type it in the compose box and hit Celebrate.")
                     .font(.caption)
+        }
+        .card()
+    }
+
+    private var linksCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Links", systemImage: "link")
+                .font(.headline)
+            Text("A simple list of links. Add one, click to open in your browser, drag to reorder, edit or delete. Perfect for a quick set of bookmarks.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var cardsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("313 Cards — one word per card", systemImage: "square.grid.3x3")
+                .font(.headline)
+            Text("A deck of one-word cards. Tap a card to open a dialog with 5 related words and an optional link. Group cards under a name you can search by, and export/import the whole deck as JSON.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var pomodoroCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Pomodoro", systemImage: "timer")
+                .font(.headline)
+            Text("Classic focus timer — Focus 25 / Short break 5 / Long break 15. Start with Space, auto-switches to a break when a focus session ends, and counts your sessions.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var sprintsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Sprints — stories & tasks", systemImage: "flag")
+                .font(.headline)
+            Text("Time-boxed sprints (30 min / 1 hr / 2 hrs). Add stories, break each story into tasks, and move stories between sprints. Marking a task or an entire sprint done automatically adds a Win to your feed.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .card()
     }

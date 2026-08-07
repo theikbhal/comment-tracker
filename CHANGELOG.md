@@ -2,6 +2,15 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.4.0]
+
+### Added
+- Links — a simple reorderable list (drag to reorder, add, edit, delete; click to open).
+- 313 Cards — a one-word card deck; tap a card for a dialog with up to 5 words and a link; group by a searchable name; export/import the whole deck as JSON.
+- Pomodoro — focus (25) / short break (5) / long break (15) timer that counts your sessions.
+- Sprints — time-boxed (30 min / 1 hr / 2 hrs) sprints with stories broken into tasks; edit/delete/move stories between sprints; marking a task or a sprint done automatically adds a Win.
+- All new sections searchable from ⌘K.
+
 ## [v1.3.0]
 
 ### Added

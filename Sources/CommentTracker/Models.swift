@@ -369,6 +369,111 @@ struct Win: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Links (simple bookmark list)
+
+struct LinkItem: Identifiable, Equatable {
+    let id: Int
+    var label: String
+    var url: String
+    var position: Int
+    var createdAt: Date
+}
+
+// MARK: - 313 Cards (one-word deck)
+
+struct WordCard: Identifiable, Equatable {
+    let id: Int
+    var word: String
+    var groupName: String
+    var words: [String]
+    var link: String
+    var createdAt: Date
+    var updatedAt: Date
+
+    var wordsText: String {
+        words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " | ")
+    }
+}
+
+// MARK: - Pomodoro
+
+enum PomodoroMode: String, CaseIterable, Identifiable {
+    case focus = "focus"
+    case short = "short"
+    case long = "long"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .focus: return "Focus"
+        case .short: return "Short break"
+        case .long: return "Long break"
+        }
+    }
+
+    var minutes: Int {
+        switch self {
+        case .focus: return 25
+        case .short: return 5
+        case .long: return 15
+        }
+    }
+}
+
+struct PomodoroSession: Identifiable, Equatable {
+    let id: Int
+    var mode: PomodoroMode
+    var startedAt: Date
+    var endedAt: Date?
+}
+
+// MARK: - Sprints
+
+enum SprintPreset: Int, CaseIterable, Identifiable {
+    case thirty = 30
+    case hour = 60
+    case twoHours = 120
+
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .thirty: return "30 minutes"
+        case .hour: return "1 hour"
+        case .twoHours: return "2 hours"
+        }
+    }
+}
+
+struct Sprint: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var startAt: Date?
+    var endAt: Date?
+    var notes: String
+    var done: Bool
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct Story: Identifiable, Equatable {
+    let id: Int
+    var sprintId: Int
+    var title: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct StoryTask: Identifiable, Equatable {
+    let id: Int
+    var storyId: Int
+    var title: String
+    var done: Bool
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Trackers (daily life routines)
 
 func dayString(_ date: Date) -> String {

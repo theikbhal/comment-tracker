@@ -29,6 +29,14 @@ final class Store: ObservableObject {
 
     @Published var wins: [Win] = []
 
+    @Published var links: [LinkItem] = []
+    @Published var cards: [WordCard] = []
+    @Published var pomodoros: [PomodoroSession] = []
+    @Published var sprints: [Sprint] = []
+    @Published var stories: [Story] = []
+    @Published var storyTasks: [StoryTask] = []
+    @Published var sprintToDetail: Sprint?
+
     @Published var trackers: [Tracker] = []
     @Published var trackerEntries: [TrackerEntry] = []
     @Published var trackerToDetail: Tracker?
@@ -71,6 +79,12 @@ final class Store: ObservableObject {
         videoComments = loadVideoComments()
         thoughts = loadThoughts()
         wins = loadWins()
+        links = loadLinks()
+        cards = loadCards()
+        pomodoros = loadPomodoros()
+        sprints = loadSprints()
+        stories = loadStories()
+        storyTasks = loadStoryTasks()
         trackers = loadTrackers()
         trackerEntries = loadTrackerEntries()
     }
@@ -495,6 +509,263 @@ final class Store: ObservableObject {
         return ok
     }
 
+    // MARK: - Links
+
+    func link(_ l: LinkItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return l.label.lowercased().contains(q) || l.url.lowercased().contains(q)
+    }
+
+    func addLink(label: String, url: String) {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let position = links.count
+        _ = db.execute(
+            "INSERT INTO links (label, url, position, created_at) VALUES (?, ?, ?, ?)",
+            [label, trimmed, position, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func updateLink(id: Int, label: String? = nil, url: String? = nil) {
+        guard let l = links.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE links SET label = ?, url = ? WHERE id = ?", [label ?? l.label, url ?? l.url, id])
+        refresh()
+    }
+
+    func deleteLink(_ id: Int) {
+        _ = db.execute("DELETE FROM links WHERE id = ?", [id])
+        refresh()
+    }
+
+    func moveLink(_ id: Int, to newIndex: Int) {
+        guard let link = links.first(where: { $0.id == id }) else { return }
+        var ordered = links
+        guard let fromIndex = ordered.firstIndex(where: { $0.id == id }) else { return }
+        ordered.remove(at: fromIndex)
+        ordered.insert(link, at: max(0, min(newIndex, ordered.count)))
+        for (i, l) in ordered.enumerated() {
+            _ = db.execute("UPDATE links SET position = ? WHERE id = ?", [i, l.id])
+        }
+        refresh()
+    }
+
+    // MARK: - 313 Cards
+
+    func card(_ c: WordCard, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if c.word.lowercased().contains(q) { return true }
+        if c.groupName.lowercased().contains(q) { return true }
+        if c.wordsText.lowercased().contains(q) { return true }
+        return false
+    }
+
+    func addCard(word: String, group: String = "", words: [String] = [], link: String = "") {
+        let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        let wordsText = words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "|")
+        _ = db.execute(
+            "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed, group.trimmingCharacters(in: .whitespacesAndNewlines), wordsText, link, now, now]
+        )
+        refresh()
+    }
+
+    func updateCard(id: Int, word: String? = nil, group: String? = nil, words: [String]? = nil, link: String? = nil) {
+        guard let c = cards.first(where: { $0.id == id }) else { return }
+        let wordsText = (words ?? c.words).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "|")
+        _ = db.execute(
+            "UPDATE wordcards SET word = ?, group_name = ?, words = ?, link = ?, updated_at = ? WHERE id = ?",
+            [word ?? c.word, group ?? c.groupName, wordsText, link ?? c.link, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteCard(_ id: Int) {
+        _ = db.execute("DELETE FROM wordcards WHERE id = ?", [id])
+        refresh()
+    }
+
+    var cardGroups: [String] {
+        var seen: [String] = []
+        for c in cards {
+            let g = c.groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !g.isEmpty && !seen.contains(g) { seen.append(g) }
+        }
+        return seen
+    }
+
+    func exportCards() -> String? {
+        struct CardDTO: Codable {
+            let word: String
+            var group: String
+            var words: [String]
+            var link: String
+        }
+        let dtos = cards.map { CardDTO(word: $0.word, group: $0.groupName, words: $0.words, link: $0.link) }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(dtos) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    func importCards(fromJSON text: String) -> Int {
+        guard let data = text.data(using: .utf8) else { return 0 }
+        struct CardDTO: Decodable {
+            let word: String
+            var group: String?
+            var words: [String]?
+            var link: String?
+        }
+        guard let dtos = try? JSONDecoder().decode([CardDTO].self, from: data) else { return 0 }
+        var added = 0
+        let now = Date().timeIntervalSince1970
+        for d in dtos {
+            let w = d.word.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !w.isEmpty else { continue }
+            _ = db.execute(
+                "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                [w, d.group ?? "", (d.words ?? []).joined(separator: "|"), d.link ?? "", now, now]
+            )
+            added += 1
+        }
+        if added > 0 { refresh() }
+        return added
+    }
+
+    // MARK: - Pomodoro
+
+    var focusSessionsToday: Int {
+        let dayStart = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+        return pomodoros.filter { $0.mode == .focus && $0.endedAt != nil && $0.startedAt.timeIntervalSince1970 >= dayStart }.count
+    }
+
+    @discardableResult
+    func addPomodoro(mode: PomodoroMode, startedAt: Date) -> Int {
+        _ = db.execute("INSERT INTO pomodoro_sessions (mode, started_at) VALUES (?, ?)", [mode.rawValue, startedAt.timeIntervalSince1970])
+        return db.lastInsertID()
+    }
+
+    func endPomodoro(id: Int) {
+        _ = db.execute("UPDATE pomodoro_sessions SET ended_at = ? WHERE id = ?", [Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    // MARK: - Sprints
+
+    func sprint(_ s: Sprint, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if s.name.lowercased().contains(q) { return true }
+        if s.notes.lowercased().contains(q) { return true }
+        return false
+    }
+
+    func story(_ s: Story, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        return s.title.lowercased().contains(q)
+    }
+
+    func addSprint(name: String, startAt: Date?, endAt: Date?, notes: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO sprints (name, start_at, end_at, notes, done, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)",
+            [trimmed, startAt?.timeIntervalSince1970, endAt?.timeIntervalSince1970, notes, now, now]
+        )
+        refresh()
+    }
+
+    func updateSprint(id: Int, name: String? = nil, startAt: Date? = nil, endAt: Date? = nil, notes: String? = nil, done: Bool? = nil) {
+        guard let s = sprints.first(where: { $0.id == id }) else { return }
+        let newDone = done ?? s.done
+        _ = db.execute(
+            "UPDATE sprints SET name = ?, start_at = ?, end_at = ?, notes = ?, done = ?, updated_at = ? WHERE id = ?",
+            [name ?? s.name, startAt?.timeIntervalSince1970, endAt?.timeIntervalSince1970, notes ?? s.notes, newDone ? 1 : 0, Date().timeIntervalSince1970, id]
+        )
+        if let done, done && !s.done {
+            addWin(text: "Sprint done: \(name ?? s.name)")
+        } else {
+            refresh()
+        }
+    }
+
+    func deleteSprint(_ id: Int) {
+        let storyIDs = stories.filter { $0.sprintId == id }.map { $0.id }
+        for sid in storyIDs {
+            _ = db.execute("DELETE FROM story_tasks WHERE story_id = ?", [sid])
+        }
+        _ = db.execute("DELETE FROM stories WHERE sprint_id = ?", [id])
+        _ = db.execute("DELETE FROM sprints WHERE id = ?", [id])
+        refresh()
+    }
+
+    func storiesForSprint(_ sprintId: Int) -> [Story] {
+        stories.filter { $0.sprintId == sprintId }.sorted { $0.updatedAt < $1.updatedAt }
+    }
+
+    func addStory(sprintId: Int, title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute("INSERT INTO stories (sprint_id, title, created_at, updated_at) VALUES (?, ?, ?, ?)", [sprintId, trimmed, now, now])
+        refresh()
+    }
+
+    func updateStory(id: Int, title: String? = nil, sprintId: Int? = nil) {
+        guard let st = stories.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE stories SET title = ?, sprint_id = ?, updated_at = ? WHERE id = ?",
+                       [title ?? st.title, sprintId ?? st.sprintId, Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func deleteStory(_ id: Int) {
+        _ = db.execute("DELETE FROM story_tasks WHERE story_id = ?", [id])
+        _ = db.execute("DELETE FROM stories WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Tasks
+
+    func tasksForStory(_ storyId: Int) -> [StoryTask] {
+        storyTasks.filter { $0.storyId == storyId }.sorted { $0.updatedAt < $1.updatedAt }
+    }
+
+    func tasksForSprint(_ sprintId: Int) -> [StoryTask] {
+        let sid = Set(storiesForSprint(sprintId).map { $0.id })
+        return storyTasks.filter { sid.contains($0.storyId) }
+    }
+
+    func addTask(storyId: Int, title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute("INSERT INTO story_tasks (story_id, title, done, created_at, updated_at) VALUES (?, ?, 0, ?, ?)", [storyId, trimmed, now, now])
+        refresh()
+    }
+
+    func updateTask(id: Int, title: String? = nil, done: Bool? = nil) {
+        guard let t = storyTasks.first(where: { $0.id == id }) else { return }
+        let newDone = done ?? t.done
+        _ = db.execute("UPDATE story_tasks SET title = ?, done = ?, updated_at = ? WHERE id = ?",
+                       [title ?? t.title, newDone ? 1 : 0, Date().timeIntervalSince1970, id])
+        if let done, done && !t.done {
+            addWin(text: "Task done: \(title ?? t.title)")
+        } else {
+            refresh()
+        }
+    }
+
+    func deleteTask(_ id: Int) {
+        _ = db.execute("DELETE FROM story_tasks WHERE id = ?", [id])
+        refresh()
+    }
+
     // MARK: - Trackers
 
     var enabledTrackers: [Tracker] {
@@ -845,6 +1116,65 @@ final class Store: ObservableObject {
                 body: body,
                 createdAt: Date(timeIntervalSince1970: created)
             )
+        }
+    }
+
+    private func loadLinks() -> [LinkItem] {
+        db.query("SELECT * FROM links ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard let id = row["id"] as? Int, let url = row["url"] as? String, let created = row["created_at"] as? Double else { return nil }
+            return LinkItem(id: id, label: row["label"] as? String ?? "", url: url, position: row["position"] as? Int ?? 0, createdAt: Date(timeIntervalSince1970: created))
+        }
+    }
+
+    private func loadCards() -> [WordCard] {
+        db.query("SELECT * FROM wordcards ORDER BY created_at ASC").compactMap { row in
+            guard let id = row["id"] as? Int, let word = row["word"] as? String, let created = row["created_at"] as? Double else { return nil }
+            return WordCard(
+                id: id,
+                word: word,
+                groupName: row["group_name"] as? String ?? "",
+                words: (row["words"] as? String ?? "").split(separator: "|").map(String.init),
+                link: row["link"] as? String ?? "",
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadPomodoros() -> [PomodoroSession] {
+        db.query("SELECT * FROM pomodoro_sessions ORDER BY started_at DESC").compactMap { row in
+            guard let id = row["id"] as? Int, let modeRaw = row["mode"] as? String, let mode = PomodoroMode(rawValue: modeRaw), let created = row["started_at"] as? Double else { return nil }
+            return PomodoroSession(id: id, mode: mode, startedAt: Date(timeIntervalSince1970: created), endedAt: (row["ended_at"] as? Double).map { Date(timeIntervalSince1970: $0) })
+        }
+    }
+
+    private func loadSprints() -> [Sprint] {
+        db.query("SELECT * FROM sprints ORDER BY created_at DESC").compactMap { row in
+            guard let id = row["id"] as? Int, let name = row["name"] as? String, let created = row["created_at"] as? Double else { return nil }
+            return Sprint(
+                id: id,
+                name: name,
+                startAt: (row["start_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                endAt: (row["end_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                notes: row["notes"] as? String ?? "",
+                done: (row["done"] as? Int ?? 0) == 1,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadStories() -> [Story] {
+        db.query("SELECT * FROM stories ORDER BY created_at ASC").compactMap { row in
+            guard let id = row["id"] as? Int, let sprintID = row["sprint_id"] as? Int, let title = row["title"] as? String, let created = row["created_at"] as? Double else { return nil }
+            return Story(id: id, sprintId: sprintID, title: title, createdAt: Date(timeIntervalSince1970: created), updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created))
+        }
+    }
+
+    private func loadStoryTasks() -> [StoryTask] {
+        db.query("SELECT * FROM story_tasks ORDER BY created_at ASC").compactMap { row in
+            guard let id = row["id"] as? Int, let storyID = row["story_id"] as? Int, let title = row["title"] as? String, let created = row["created_at"] as? Double else { return nil }
+            return StoryTask(id: id, storyId: storyID, title: title, done: (row["done"] as? Int ?? 0) == 1, createdAt: Date(timeIntervalSince1970: created), updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created))
         }
     }
 
