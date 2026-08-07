@@ -68,6 +68,8 @@ final class Store: ObservableObject {
     @Published var airtableColumns: [AirtableColumn] = []
     @Published var airtableRows: [AirtableRow] = []
     @Published var airtableCells: [AirtableCell] = []
+    @Published var hostedVideos: [HostedVideo] = []
+    @Published var hostedVideoComments: [HostedVideoComment] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -184,6 +186,8 @@ final class Store: ObservableObject {
         airtableColumns = loadAirtableColumns()
         airtableRows = loadAirtableRows()
         airtableCells = loadAirtableCells()
+        hostedVideos = loadHostedVideos()
+        hostedVideoComments = loadHostedVideoComments()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -3986,6 +3990,133 @@ final class Store: ObservableObject {
         let other = rows[target]
         _ = db.execute("UPDATE airtable_rows SET position = ? WHERE id = ?", [other.position, id])
         _ = db.execute("UPDATE airtable_rows SET position = ? WHERE id = ?", [rows[index].position, other.id])
+        refresh()
+    }
+
+    // MARK: - Mini video hosting
+
+    var sortedHostedVideos: [HostedVideo] {
+        hostedVideos.sorted { $0.position < $1.position }
+    }
+
+    private func loadHostedVideos() -> [HostedVideo] {
+        db.query("SELECT * FROM hosted_videos ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let description = row["description"] as? String,
+                let url = row["url"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return HostedVideo(
+                id: id,
+                title: title,
+                description: description,
+                url: url,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadHostedVideoComments() -> [HostedVideoComment] {
+        db.query("SELECT * FROM hosted_video_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let videoID = row["video_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return HostedVideoComment(
+                id: id,
+                videoId: videoID,
+                parentId: row["parent_id"] as? Int,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func hostedVideo(_ v: HostedVideo, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return v.title.lowercased().contains(q) || v.description.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addHostedVideo(title: String, description: String, url: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (hostedVideos.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO hosted_videos (title, description, url, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed, description, url, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateHostedVideo(id: Int, title: String, description: String, url: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE hosted_videos SET title = ?, description = ?, url = ?, updated_at = ? WHERE id = ?",
+            [trimmed, description, url, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveHostedVideo(id: Int, direction: Int) {
+        let list = sortedHostedVideos
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE hosted_videos SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE hosted_videos SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteHostedVideo(_ id: Int) {
+        _ = db.execute("DELETE FROM hosted_videos WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM hosted_video_comments WHERE video_id = ?", [id])
+        refresh()
+    }
+
+    func hostedVideoComments(for videoID: Int) -> [HostedVideoComment] {
+        hostedVideoComments.filter { $0.videoId == videoID }
+    }
+
+    func topLevelHostedComments(for videoID: Int) -> [HostedVideoComment] {
+        hostedVideoComments(for: videoID).filter { !$0.isReply }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func hostedReplies(to commentID: Int) -> [HostedVideoComment] {
+        hostedVideoComments.filter { $0.parentId == commentID }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func hostedReplyCount(to commentID: Int) -> Int {
+        hostedVideoComments.filter { $0.parentId == commentID }.count
+    }
+
+    func addHostedVideoComment(videoID: Int, parentID: Int?, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO hosted_video_comments (video_id, parent_id, body, created_at) VALUES (?, ?, ?, ?)",
+            [videoID, parentID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteHostedVideoComment(_ id: Int) {
+        _ = db.execute("DELETE FROM hosted_video_comments WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM hosted_video_comments WHERE parent_id = ?", [id])
         refresh()
     }
 

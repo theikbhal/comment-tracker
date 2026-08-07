@@ -46,6 +46,7 @@ struct HelpView: View {
                 featuresCard
                 tableTrackerCard
                 airtableCard
+                miniVideosCard
                 pendingCard
                 dietCard
                 familyCard
@@ -403,6 +404,17 @@ struct HelpView: View {
             Label("Mini Airtable — your own little database", systemImage: "rectangle.3.group.fill")
                 .font(.headline)
             Text("Create tables with typed columns — text, number, checkbox, date — then add rows and edit cells inline. Rename columns, change their type, reorder columns and rows, and delete what you don't need.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var miniVideosCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Mini Videos — host your own", systemImage: "video.fill")
+                .font(.headline)
+            Text("Paste a YouTube link and it plays right in the app with a thumbnail. Each video has a title, a markdown description, and a comments feed with nested reply threads.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

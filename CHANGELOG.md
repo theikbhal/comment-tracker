@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.25.0]
+
+### Added
+- **Mini Videos tab**: host your own videos. Paste a YouTube link and it embeds and plays right in the app (thumbnail on the card). Each video has a title, markdown description, and a comments feed with nested reply threads.
+
 ## [v1.24.0]
 
 ### Added

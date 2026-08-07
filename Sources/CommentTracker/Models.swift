@@ -1009,6 +1009,32 @@ struct AirtableCell: Identifiable, Equatable {
     var value: String
 }
 
+// MARK: - Mini video hosting
+
+struct HostedVideo: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var description: String
+    var url: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var isEmbeddableYouTube: Bool {
+        youtubeVideoID(from: url) != nil
+    }
+}
+
+struct HostedVideoComment: Identifiable, Equatable {
+    let id: Int
+    var videoId: Int
+    var parentId: Int?
+    var body: String
+    var createdAt: Date
+
+    var isReply: Bool { parentId != nil }
+}
+
 // MARK: - Family
 
 struct FamilyMember: Identifiable, Equatable {

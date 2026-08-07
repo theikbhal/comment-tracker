@@ -145,6 +145,10 @@ struct GlobalSearchView: View {
         store.airtables.filter { store.airtable($0, matches: query) }
     }
 
+    private var hostedVideoResults: [HostedVideo] {
+        store.hostedVideos.filter { store.hostedVideo($0, matches: query) }
+    }
+
     private var pendingResults: [PendingItem] {
         store.pendingItems.filter { store.pendingItem($0, matches: query) }
     }
@@ -428,6 +432,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if hostedVideoResults.count > 0 {
+                        section("Mini Videos", icon: "video.fill") {
+                            ForEach(hostedVideoResults) { v in
+                                row(icon: "video.fill", color: .red, title: v.title, subtitle: "\(store.hostedVideoComments(for: v.id).count) comments") {
+                                    dismiss()
+                                    onNavigate(.hosting)
+                                }
+                            }
+                        }
+                    }
                     if pendingResults.count > 0 {
                         section("Pending", icon: "hourglass") {
                             ForEach(pendingResults) { p in
@@ -578,7 +592,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -680,6 +694,8 @@ struct GlobalSearchView: View {
             Text("\(tableResults.count) tables")
             Text("·")
             Text("\(airtableResults.count) airtables")
+            Text("·")
+            Text("\(hostedVideoResults.count) videos")
             Text("·")
             Text("\(pendingResults.count) pending")
             Text("·")
