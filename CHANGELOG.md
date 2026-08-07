@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.9.0]
+
+### Added
+- New **Urgent** tab: four urgency lists (Now / Today / Soon / Whenever) side by side, wins-style cards. Add from any lane's + or the header button — the popup lets you pick the section. Drag cards to reorder within a lane or move between lanes; right-click to edit, move, or delete.
+
 ## [v1.8.0]
 
 ### Added

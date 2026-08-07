@@ -532,6 +532,54 @@ struct HoldingItem: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Urgent (parallel lists by urgency, wins-style)
+
+enum Urgency: Int, CaseIterable, Identifiable {
+    case now = 0, today = 1, soon = 2, whenever = 3
+
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .now: return "Now"
+        case .today: return "Today"
+        case .soon: return "Soon"
+        case .whenever: return "Whenever"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .now: return .red
+        case .today: return .orange
+        case .soon: return .yellow
+        case .whenever: return .gray
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .now: return "flame.fill"
+        case .today: return "sun.max.fill"
+        case .soon: return "clock.fill"
+        case .whenever: return "cloud.fill"
+        }
+    }
+}
+
+let allUrgencies: [Urgency] = [.now, .today, .soon, .whenever]
+
+struct UrgentItem: Identifiable, Equatable {
+    let id: Int
+    var urgency: Urgency
+    var text: String
+    var note: String
+    var position: Int
+    var done: Bool
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

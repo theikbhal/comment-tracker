@@ -37,6 +37,7 @@ final class Store: ObservableObject {
     @Published var deepWork: [DeepWorkSession] = []
     @Published var schedule: [ScheduleEntry] = []
     @Published var holding: [HoldingItem] = []
+    @Published var urgent: [UrgentItem] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -97,6 +98,7 @@ final class Store: ObservableObject {
         deepWork = loadDeepWork()
         schedule = loadSchedule()
         holding = loadHolding()
+        urgent = loadUrgent()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -827,6 +829,81 @@ final class Store: ObservableObject {
         _ = db.execute("UPDATE holding SET done = ? WHERE id = ?", [newValue, id])
         refresh()
         return newValue == 1
+    }
+
+    // MARK: - Urgent
+
+    func urgentItem(_ u: UrgentItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return u.text.lowercased().contains(q) || u.note.lowercased().contains(q)
+    }
+
+    func urgentItems(for urgency: Urgency) -> [UrgentItem] {
+        urgent
+            .filter { $0.urgency == urgency }
+            .sorted { $0.position < $1.position }
+    }
+
+    func addUrgent(text: String, urgency: Urgency, note: String = "") {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        let position = urgentItems(for: urgency).count
+        _ = db.execute(
+            "INSERT INTO urgent (urgency, text, note, position, done, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)",
+            [urgency.rawValue, trimmed, note, position, now, now]
+        )
+        refresh()
+    }
+
+    func moveUrgent(_ id: Int, to urgency: Urgency, at index: Int) {
+        guard let item = urgent.first(where: { $0.id == id }) else { return }
+        let from = item.urgency
+        var target = urgentItems(for: urgency)
+        target.removeAll { $0.id == id }
+        let clamped = max(0, min(index, target.count))
+        target.insert(item, at: clamped)
+        writeUrgentOrder(target, urgency: urgency)
+        if from != urgency {
+            writeUrgentOrder(urgentItems(for: from).filter { $0.id != id }, urgency: from)
+        }
+        refresh()
+    }
+
+    func updateUrgent(id: Int, text: String? = nil, note: String? = nil, urgency: Urgency? = nil) {
+        guard let item = urgent.first(where: { $0.id == id }) else { return }
+        let newUrgency = urgency ?? item.urgency
+        _ = db.execute(
+            "UPDATE urgent SET text = ?, note = ?, urgency = ?, updated_at = ? WHERE id = ?",
+            [text ?? item.text, note ?? item.note, newUrgency.rawValue, Date().timeIntervalSince1970, id]
+        )
+        if let urgency, urgency != item.urgency {
+            writeUrgentOrder(urgentItems(for: item.urgency).filter { $0.id != id }, urgency: item.urgency)
+            writeUrgentOrder(urgentItems(for: urgency), urgency: urgency)
+        }
+        refresh()
+    }
+
+    func toggleUrgentDone(_ id: Int) -> Bool {
+        guard let item = urgent.first(where: { $0.id == id }) else { return false }
+        let newValue = item.done ? 0 : 1
+        _ = db.execute("UPDATE urgent SET done = ?, updated_at = ? WHERE id = ?", [newValue, Date().timeIntervalSince1970, id])
+        refresh()
+        return newValue == 1
+    }
+
+    func deleteUrgent(_ id: Int) {
+        guard let item = urgent.first(where: { $0.id == id }) else { return }
+        _ = db.execute("DELETE FROM urgent WHERE id = ?", [id])
+        writeUrgentOrder(urgentItems(for: item.urgency).filter { $0.id != id }, urgency: item.urgency)
+        refresh()
+    }
+
+    private func writeUrgentOrder(_ ordered: [UrgentItem], urgency: Urgency) {
+        for (i, item) in ordered.enumerated() {
+            _ = db.execute("UPDATE urgent SET position = ?, updated_at = ? WHERE id = ?", [i, Date().timeIntervalSince1970, item.id])
+        }
     }
 
     // MARK: - Backup & Restore
@@ -1720,6 +1797,31 @@ final class Store: ObservableObject {
                 bookmarked: (row["bookmarked"] as? Int ?? 0) == 1,
                 done: (row["done"] as? Int ?? 0) == 1,
                 createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadUrgent() -> [UrgentItem] {
+        db.query("SELECT * FROM urgent ORDER BY urgency ASC, position ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let urgencyRaw = row["urgency"] as? Int,
+                let urgency = Urgency(rawValue: urgencyRaw),
+                let text = row["text"] as? String,
+                let note = row["note"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return UrgentItem(
+                id: id,
+                urgency: urgency,
+                text: text,
+                note: note,
+                position: position,
+                done: (row["done"] as? Int ?? 0) == 1,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
             )
         }
     }

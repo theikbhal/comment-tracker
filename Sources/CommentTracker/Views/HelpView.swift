@@ -27,6 +27,7 @@ struct HelpView: View {
                 buckCard
                 focusCard
                 parallelCard
+                urgentCard
                 holdingCard
                 projectCard
                 deepWorkCard
@@ -174,6 +175,17 @@ struct HelpView: View {
             Label("Parallel — 3 threads + a catch-all", systemImage: "square.split.3x1")
                 .font(.headline)
             Text("Keep three things running side by side (Thing 1 / 2 / 3) plus an Unorganized bucket for everything that doesn't fit yet. Drag items between lanes or use right-click to move them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var urgentCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Urgent — four urgency lists side by side", systemImage: "flame.fill")
+                .font(.headline)
+            Text("Now / Today / Soon / Whenever, in parallel lanes. Use the + on any lane or Add urgent to open the popup, where you pick the section from a menu. Drag cards to reorder within a lane or move them between lanes; right-click to edit, move, or delete.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

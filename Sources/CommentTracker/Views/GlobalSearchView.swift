@@ -77,6 +77,10 @@ struct GlobalSearchView: View {
         store.holding.filter { store.holdingItem($0, matches: query) }
     }
 
+    private var urgentResults: [UrgentItem] {
+        store.urgent.filter { store.urgentItem($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -174,6 +178,16 @@ struct GlobalSearchView: View {
                                 row(icon: "hand.raised.fill", color: .teal, title: h.text, subtitle: h.done ? "Released · \(h.createdAt.formatted(date: .abbreviated, time: .omitted))" : "Held · \(h.createdAt.formatted(date: .abbreviated, time: .omitted))") {
                                     dismiss()
                                     onNavigate(.holding)
+                                }
+                            }
+                        }
+                    }
+                    if urgentResults.count > 0 {
+                        section("Urgent", icon: "flame.fill") {
+                            ForEach(urgentResults) { u in
+                                row(icon: "flame.fill", color: u.urgency.color, title: u.text, subtitle: u.done ? "\(u.urgency.label) · done" : "\(u.urgency.label) · \(u.createdAt.formatted(date: .abbreviated, time: .omitted))") {
+                                    dismiss()
+                                    onNavigate(.urgent)
                                 }
                             }
                         }
@@ -278,7 +292,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -351,6 +365,8 @@ struct GlobalSearchView: View {
             Text("·")
             Text("\(holdingResults.count) holding")
             Text("·")
+            Text("\(urgentResults.count) urgent")
+            Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
             Text("\(sprintResults.count) sprints")
@@ -407,7 +423,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, holding, projects, schedule, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, urgent, holding, projects, schedule, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
