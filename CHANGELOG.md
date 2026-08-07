@@ -2,6 +2,18 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.21.0]
+
+### Added
+- **Notes upgraded to a Wins-style feed**: every check-in is now a card with a bookmark (filter to bookmarked anytime), edit, delete, and move-to-top. Same look as Wins, including the yellow bookmark ring and "show older" paging.
+- **Feature Requests tab**: a board (Ideas → Planned → In Progress → Done) for the features you want to build across your apps. Each request holds an app tag, title, markdown note, link, and a comments feed. Status is changed from the card or the detail sheet.
+
+## [v1.20.0]
+
+### Added
+- **Tools tab**: a reorderable toolkit. Each tool has a name, a markdown note (self-notes with clickable links), and an optional link that opens in your browser. Reorder with the up/down arrows.
+- **Old Dreams tab**: keep the hopes and ambitions you don't want to lose. Each dream holds a title, a markdown note, and an optional link; reorder to reflect what matters now. Double-click to edit.
+
 ## [v1.19.0]
 
 ### Added

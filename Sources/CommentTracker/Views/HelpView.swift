@@ -41,6 +41,9 @@ struct HelpView: View {
                 challengeCard
                 roadmapFeatureCard
                 alarmsCard
+                toolsCard
+                dreamsCard
+                featuresCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -338,6 +341,39 @@ struct HelpView: View {
             Label("Alarms — plain-English reminders", systemImage: "alarm.fill")
                 .font(.headline)
             Text("Just type it: \"15 minutes\", \"1 hour\", \"2pm\", \"8.30pm\". Alarms fire as notifications in the background — even on another tab or with the app closed. Quick presets for 15/30/50 min and 1 hour; snooze any alarm by 5 minutes.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var toolsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Tools — your toolkit, in order", systemImage: "wrench.and.screwdriver.fill")
+                .font(.headline)
+            Text("A reorderable list of the tools you rely on. Each has a name, a markdown note (your own self-notes with clickable links), and an optional link that opens in your browser. Reorder with the up/down arrows.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var dreamsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Old Dreams — hopes you carry", systemImage: "moon.stars.fill")
+                .font(.headline)
+            Text("A place to keep the dreams you don't want to lose. Each dream can hold a title, a markdown note, and a link — reorder them to reflect how much they matter right now.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var featuresCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Feature Requests — for the apps you build", systemImage: "lightbulb.fill")
+                .font(.headline)
+            Text("Collect what you want to build next. Tag each request with an app, add a markdown note and a link, and move it through Ideas → Planned → In Progress → Done. Every request has a comments feed for thoughts.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

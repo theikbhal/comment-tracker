@@ -383,6 +383,7 @@ struct Fail: Identifiable, Equatable {
 struct InterNote: Identifiable, Equatable {
     let id: Int
     var text: String
+    var bookmarked: Bool
     var createdAt: Date
 }
 
@@ -842,6 +843,83 @@ struct ChallengePrerequisiteLink: Identifiable, Equatable {
     let id: Int
     var challengeId: Int
     var prerequisiteId: Int
+}
+
+// MARK: - Feature requests
+
+enum FeatureRequestStatus: String, CaseIterable, Identifiable {
+    case idea, planned, inProgress, done
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .idea: return "Ideas"
+        case .planned: return "Planned"
+        case .inProgress: return "In Progress"
+        case .done: return "Done"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .idea: return .purple
+        case .planned: return .blue
+        case .inProgress: return .orange
+        case .done: return .green
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .idea: return "lightbulb.fill"
+        case .planned: return "calendar.badge.plus"
+        case .inProgress: return "hammer.fill"
+        case .done: return "checkmark.seal.fill"
+        }
+    }
+}
+
+struct FeatureRequest: Identifiable, Equatable {
+    let id: Int
+    var app: String
+    var title: String
+    var body: String
+    var status: FeatureRequestStatus
+    var link: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct FeatureRequestComment: Identifiable, Equatable {
+    let id: Int
+    var featureRequestId: Int
+    var body: String
+    var createdAt: Date
+}
+
+// MARK: - Tools
+
+struct Tool: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var note: String
+    var link: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+// MARK: - Old dreams
+
+struct Dream: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var note: String
+    var link: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
 }
 
 // MARK: - Roadmap

@@ -279,6 +279,24 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS tools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            link TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS dreams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            link TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS challenge_comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             challenge_id INTEGER NOT NULL,
@@ -289,6 +307,23 @@ final class DatabaseManager {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             challenge_id INTEGER NOT NULL,
             prerequisite_id INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS feature_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            app TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL,
+            body TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'idea',
+            link TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS feature_request_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feature_request_id INTEGER NOT NULL,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -371,6 +406,7 @@ final class DatabaseManager {
         ensureColumn(table: "wordcards", column: "slot", definition: "INTEGER NOT NULL DEFAULT 0")
         _ = execute("UPDATE wordcards SET slot = id WHERE slot = 0")
         ensureColumn(table: "calendar_events", column: "reminder", definition: "INTEGER NOT NULL DEFAULT 0")
+        ensureColumn(table: "interstitial_notes", column: "bookmarked", definition: "INTEGER NOT NULL DEFAULT 0")
     }
 
     private func ensureColumn(table: String, column: String, definition: String) {

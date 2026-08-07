@@ -125,6 +125,18 @@ struct GlobalSearchView: View {
         store.alarms.filter { store.alarm($0, matches: query) }
     }
 
+    private var toolResults: [Tool] {
+        store.tools.filter { store.tool($0, matches: query) }
+    }
+
+    private var dreamResults: [Dream] {
+        store.dreams.filter { store.dream($0, matches: query) }
+    }
+
+    private var featureResults: [FeatureRequest] {
+        store.featureRequests.filter { store.featureRequest($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -338,6 +350,36 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if toolResults.count > 0 {
+                        section("Tools", icon: "wrench.and.screwdriver.fill") {
+                            ForEach(toolResults) { t in
+                                row(icon: "wrench.and.screwdriver.fill", color: .indigo, title: t.name, subtitle: t.link.isEmpty ? "Tool" : t.link) {
+                                    dismiss()
+                                    onNavigate(.tools)
+                                }
+                            }
+                        }
+                    }
+                    if dreamResults.count > 0 {
+                        section("Old Dreams", icon: "moon.stars.fill") {
+                            ForEach(dreamResults) { d in
+                                row(icon: "moon.stars.fill", color: .purple, title: d.title, subtitle: d.link.isEmpty ? "Dream" : d.link) {
+                                    dismiss()
+                                    onNavigate(.dreams)
+                                }
+                            }
+                        }
+                    }
+                    if featureResults.count > 0 {
+                        section("Feature Requests", icon: "lightbulb.fill") {
+                            ForEach(featureResults) { f in
+                                row(icon: "lightbulb.fill", color: .yellow, title: f.title, subtitle: f.app.isEmpty ? f.status.displayName : "\(f.app) · \(f.status.displayName)") {
+                                    dismiss()
+                                    onNavigate(.features)
+                                }
+                            }
+                        }
+                    }
                     if trackerResults.count > 0 {
                         section("Trackers", icon: "checklist") {
                             ForEach(trackerResults) { t in
@@ -438,7 +480,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -530,6 +572,12 @@ struct GlobalSearchView: View {
             Text("\(roadmapResults.count) roadmap")
             Text("·")
             Text("\(alarmResults.count) alarms")
+            Text("·")
+            Text("\(toolResults.count) tools")
+            Text("·")
+            Text("\(dreamResults.count) dreams")
+            Text("·")
+            Text("\(featureResults.count) requests")
             Text("·")
             Text("\(cardResults.count) cards")
             Text("·")

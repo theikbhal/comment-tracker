@@ -52,6 +52,10 @@ final class Store: ObservableObject {
     @Published var challengeComments: [ChallengeComment] = []
     @Published var challengePrerequisiteLinks: [ChallengePrerequisiteLink] = []
     @Published var alarms: [AlarmItem] = []
+    @Published var tools: [Tool] = []
+    @Published var dreams: [Dream] = []
+    @Published var featureRequests: [FeatureRequest] = []
+    @Published var featureRequestComments: [FeatureRequestComment] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -152,6 +156,10 @@ final class Store: ObservableObject {
         challengeComments = loadChallengeComments()
         challengePrerequisiteLinks = loadChallengePrerequisiteLinks()
         alarms = loadAlarms()
+        tools = loadTools()
+        dreams = loadDreams()
+        featureRequests = loadFeatureRequests()
+        featureRequestComments = loadFeatureRequestComments()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -618,6 +626,24 @@ final class Store: ObservableObject {
 
     func deleteInterNote(_ id: Int) {
         _ = db.execute("DELETE FROM interstitial_notes WHERE id = ?", [id])
+        refresh()
+    }
+
+    func toggleInterNoteBookmark(_ id: Int) {
+        guard let note = interNotes.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE interstitial_notes SET bookmarked = ? WHERE id = ?", [note.bookmarked ? 0 : 1, id])
+        refresh()
+    }
+
+    func updateInterNote(_ id: Int, text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE interstitial_notes SET text = ? WHERE id = ?", [trimmed, id])
+        refresh()
+    }
+
+    func moveInterNoteToTop(_ id: Int) {
+        _ = db.execute("UPDATE interstitial_notes SET created_at = ? WHERE id = ?", [Date().timeIntervalSince1970, id])
         refresh()
     }
 
@@ -2226,7 +2252,12 @@ final class Store: ObservableObject {
                 let text = row["text"] as? String,
                 let created = row["created_at"] as? Double
             else { return nil }
-            return InterNote(id: id, text: text, createdAt: Date(timeIntervalSince1970: created))
+            return InterNote(
+                id: id,
+                text: text,
+                bookmarked: (row["bookmarked"] as? Int) == 1,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
         }
     }
 
@@ -2957,6 +2988,274 @@ final class Store: ObservableObject {
             removeAlarmNotification(id: alarm.id)
             scheduleAlarmNotification(id: alarm.id, label: alarm.label, fireAt: alarm.fireAt)
         }
+    }
+
+    // MARK: - Tools
+
+    var sortedTools: [Tool] {
+        tools.sorted { $0.position < $1.position }
+    }
+
+    private func loadTools() -> [Tool] {
+        db.query("SELECT * FROM tools ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let note = row["note"] as? String,
+                let link = row["link"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Tool(
+                id: id,
+                name: name,
+                note: note,
+                link: link,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func tool(_ t: Tool, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return t.name.lowercased().contains(q) || t.note.lowercased().contains(q) || t.link.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addTool(name: String, note: String, link: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (tools.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO tools (name, note, link, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed, note, link, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateTool(id: Int, name: String, note: String, link: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE tools SET name = ?, note = ?, link = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, link, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveTool(id: Int, direction: Int) {
+        let list = sortedTools
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE tools SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE tools SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteTool(_ id: Int) {
+        _ = db.execute("DELETE FROM tools WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Old dreams
+
+    var sortedDreams: [Dream] {
+        dreams.sorted { $0.position < $1.position }
+    }
+
+    private func loadDreams() -> [Dream] {
+        db.query("SELECT * FROM dreams ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let note = row["note"] as? String,
+                let link = row["link"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Dream(
+                id: id,
+                title: title,
+                note: note,
+                link: link,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func dream(_ d: Dream, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return d.title.lowercased().contains(q) || d.note.lowercased().contains(q) || d.link.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addDream(title: String, note: String, link: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (dreams.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO dreams (title, note, link, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed, note, link, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateDream(id: Int, title: String, note: String, link: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE dreams SET title = ?, note = ?, link = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, link, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveDream(id: Int, direction: Int) {
+        let list = sortedDreams
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE dreams SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE dreams SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteDream(_ id: Int) {
+        _ = db.execute("DELETE FROM dreams WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Feature requests
+
+    private func loadFeatureRequests() -> [FeatureRequest] {
+        db.query("SELECT * FROM feature_requests ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let app = row["app"] as? String,
+                let title = row["title"] as? String,
+                let body = row["body"] as? String,
+                let statusRaw = row["status"] as? String,
+                let status = FeatureRequestStatus(rawValue: statusRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return FeatureRequest(
+                id: id,
+                app: app,
+                title: title,
+                body: body,
+                status: status,
+                link: row["link"] as? String ?? "",
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func featureRequest(_ f: FeatureRequest, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return f.title.lowercased().contains(q) || f.body.lowercased().contains(q) || f.app.lowercased().contains(q) || f.link.lowercased().contains(q)
+    }
+
+    func featureRequests(for status: FeatureRequestStatus) -> [FeatureRequest] {
+        featureRequests.filter { $0.status == status }.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    @discardableResult
+    func addFeatureRequest(app: String, title: String, body: String, link: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (featureRequests.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO feature_requests (app, title, body, status, link, position, created_at, updated_at) VALUES (?, ?, ?, 'idea', ?, ?, ?, ?)",
+            [app.trimmingCharacters(in: .whitespacesAndNewlines), trimmed, body, link, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateFeatureRequest(id: Int, app: String, title: String, body: String, link: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE feature_requests SET app = ?, title = ?, body = ?, link = ?, updated_at = ? WHERE id = ?",
+            [app.trimmingCharacters(in: .whitespacesAndNewlines), trimmed, body, link, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func setFeatureRequestStatus(id: Int, status: FeatureRequestStatus) {
+        _ = db.execute(
+            "UPDATE feature_requests SET status = ?, position = ?, updated_at = ? WHERE id = ?",
+            [status.rawValue, (featureRequests.map(\.position).max() ?? 0) + 1, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteFeatureRequest(_ id: Int) {
+        _ = db.execute("DELETE FROM feature_requests WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM feature_request_comments WHERE feature_request_id = ?", [id])
+        refresh()
+    }
+
+    private func loadFeatureRequestComments() -> [FeatureRequestComment] {
+        db.query("SELECT * FROM feature_request_comments ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let requestID = row["feature_request_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return FeatureRequestComment(
+                id: id,
+                featureRequestId: requestID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func featureRequestComments(for requestID: Int) -> [FeatureRequestComment] {
+        featureRequestComments
+            .filter { $0.featureRequestId == requestID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addFeatureRequestComment(requestID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO feature_request_comments (feature_request_id, body, created_at) VALUES (?, ?, ?)",
+            [requestID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteFeatureRequestComment(_ id: Int) {
+        _ = db.execute("DELETE FROM feature_request_comments WHERE id = ?", [id])
+        refresh()
     }
 
     private func loadChallengeComments() -> [ChallengeComment] {
