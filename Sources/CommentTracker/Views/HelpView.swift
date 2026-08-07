@@ -26,6 +26,7 @@ struct HelpView: View {
                 peopleGoalCard
                 buckCard
                 focusCard
+                parallelCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -158,6 +159,17 @@ struct HelpView: View {
             Label("Focus — one thing at a time", systemImage: "scope")
                 .font(.headline)
             Text("Pick a single current focus and the app holds the timer while you work. End it when done; every session is saved to your history with a duration and optional note, so you can look back at where attention actually went.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var parallelCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Parallel — 3 threads + a catch-all", systemImage: "square.split.3x1")
+                .font(.headline)
+            Text("Keep three things running side by side (Thing 1 / 2 / 3) plus an Unorganized bucket for everything that doesn't fit yet. Drag items between lanes or use right-click to move them.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

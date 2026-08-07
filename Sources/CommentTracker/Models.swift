@@ -439,6 +439,25 @@ struct Focus: Identifiable, Equatable {
     }
 }
 
+// MARK: - Parallel (3 threads + unorganized catch-all)
+
+struct ParallelItem: Identifiable, Equatable {
+    let id: Int
+    var lane: Int
+    var text: String
+    var note: String
+    var createdAt: Date
+
+    var laneLabel: String {
+        switch lane {
+        case 3: return "Unorganized"
+        case 1: return "Thing 2"
+        case 2: return "Thing 3"
+        default: return "Thing 1"
+        }
+    }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

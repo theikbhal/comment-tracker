@@ -127,6 +127,13 @@ final class DatabaseManager {
             started_at REAL NOT NULL,
             ended_at REAL
         );
+        CREATE TABLE IF NOT EXISTS parallel (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lane INTEGER NOT NULL DEFAULT 0,
+            text TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

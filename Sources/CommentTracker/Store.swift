@@ -32,6 +32,7 @@ final class Store: ObservableObject {
     @Published var interNotes: [InterNote] = []
     @Published var bucks: [Buck] = []
     @Published var focusSessions: [Focus] = []
+    @Published var parallel: [ParallelItem] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -87,6 +88,7 @@ final class Store: ObservableObject {
         interNotes = loadInterNotes()
         bucks = loadBucks()
         focusSessions = loadFocus()
+        parallel = loadParallel()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -634,6 +636,39 @@ final class Store: ObservableObject {
 
     func deleteFocus(_ id: Int) {
         _ = db.execute("DELETE FROM focus WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Parallel
+
+    func parallelItem(_ p: ParallelItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return p.text.lowercased().contains(q) || p.note.lowercased().contains(q)
+    }
+
+    func addParallelItem(lane: Int, text: String, note: String = "") {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO parallel (lane, text, note, created_at) VALUES (?, ?, ?, ?)",
+            [lane, trimmed, note, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func moveParallelItem(_ id: Int, to lane: Int) {
+        _ = db.execute("UPDATE parallel SET lane = ? WHERE id = ?", [lane, id])
+        refresh()
+    }
+
+    func updateParallelNote(_ id: Int, note: String) {
+        _ = db.execute("UPDATE parallel SET note = ? WHERE id = ?", [note, id])
+        refresh()
+    }
+
+    func deleteParallelItem(_ id: Int) {
+        _ = db.execute("DELETE FROM parallel WHERE id = ?", [id])
         refresh()
     }
 
@@ -1443,6 +1478,19 @@ final class Store: ObservableObject {
             else { return nil }
             let ended = (row["ended_at"] as? Double).map { Date(timeIntervalSince1970: $0) }
             return Focus(id: id, text: text, note: note, startedAt: Date(timeIntervalSince1970: started), endedAt: ended)
+        }
+    }
+
+    private func loadParallel() -> [ParallelItem] {
+        db.query("SELECT * FROM parallel ORDER BY lane ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let lane = row["lane"] as? Int,
+                let text = row["text"] as? String,
+                let note = row["note"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return ParallelItem(id: id, lane: lane, text: text, note: note, createdAt: Date(timeIntervalSince1970: created))
         }
     }
 

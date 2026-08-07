@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.6.2]
+
+### Added
+- New **Parallel** tab: 3 parallel threads (Thing 1 / 2 / 3) plus an Unorganized catch-all bucket. Add items in any lane, drag between lanes or move from right-click, attach notes.
+
 ## [v1.6.1]
 
 ### Added
