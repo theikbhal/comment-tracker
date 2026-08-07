@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.15.0]
+
+### Added
+- **52 Weeks** tab: one card per week of the year. Each shows the week number, month, and start/end dates. Click a card to add a title plus a **markdown note** — bold, lists and links work, so paste a YouTube or any URL and click it straight from the note or the card preview. Search via ⌘K, export/import all 52 as JSON, or reset.
+
 ## [v1.14.0]
 
 ### Added

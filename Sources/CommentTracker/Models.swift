@@ -719,6 +719,50 @@ struct YearCard: Identifiable, Equatable {
     }
 }
 
+// MARK: - Week cards (52 cards, one per week of the year)
+
+struct WeekCard: Identifiable, Equatable {
+    let id: Int
+    var slot: Int
+    var title: String
+    var note: String
+    var createdAt: Date
+    var updatedAt: Date
+
+    var startDate: Date {
+        let cal = Calendar.current
+        let year = cal.component(.year, from: Date())
+        let jan1 = cal.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
+        return cal.date(byAdding: .day, value: (slot - 1) * 7, to: jan1) ?? jan1
+    }
+
+    var endDate: Date {
+        let cal = Calendar.current
+        let year = cal.component(.year, from: Date())
+        let start = startDate
+        var end = cal.date(byAdding: .day, value: 6, to: start) ?? start
+        if let yearEnd = cal.date(from: DateComponents(year: year, month: 12, day: 31)), end > yearEnd {
+            end = yearEnd
+        }
+        return end
+    }
+
+    var monthNumber: Int {
+        Calendar.current.component(.month, from: startDate)
+    }
+
+    var monthName: String {
+        let index = max(0, min(11, monthNumber - 1))
+        return yearMonthNames[index]
+    }
+
+    var dateRangeText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return "\(formatter.string(from: startDate)) – \(formatter.string(from: endDate))"
+    }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

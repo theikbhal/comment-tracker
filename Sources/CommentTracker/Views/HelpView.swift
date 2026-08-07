@@ -37,6 +37,7 @@ struct HelpView: View {
                 slackCard
                 calendarCard
                 yearCard
+                weekCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -290,6 +291,17 @@ struct HelpView: View {
             Label("Year — 12 cards, one per month", systemImage: "calendar.circle")
                 .font(.headline)
             Text("One card for each month of the year. Click a card and type a single word or phrase to set its focus for that month. A count at the top shows how many of the 12 are filled. Reset clears all 12 back to empty.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var weekCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("52 Weeks — one card per week of the year", systemImage: "calendar.badge.plus")
+                .font(.headline)
+            Text("Each card shows its week number, month, and start/end dates. Click a card to add a title and a markdown note — bold, lists and links all work, so paste a YouTube URL or any link and click it straight from the note or the card preview. Search via ⌘K, export/import all 52 weeks as JSON, or reset them.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

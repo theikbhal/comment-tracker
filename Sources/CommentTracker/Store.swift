@@ -46,6 +46,7 @@ final class Store: ObservableObject {
     @Published var slackMessages: [SlackMessage] = []
     @Published var calendarEvents: [CalendarEvent] = []
     @Published var yearCards: [YearCard] = []
+    @Published var weekCards: [WeekCard] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -85,6 +86,7 @@ final class Store: ObservableObject {
         seedPresetsIfNeeded()
         seedSlackIfNeeded()
         seedYearCardsIfNeeded()
+        seedWeekCardsIfNeeded()
         refresh()
         syncCalendarReminders()
     }
@@ -117,6 +119,7 @@ final class Store: ObservableObject {
         slackMessages = loadSlackMessages()
         calendarEvents = loadCalendarEvents()
         yearCards = loadYearCards()
+        weekCards = loadWeekCards()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -2404,6 +2407,112 @@ final class Store: ObservableObject {
             _ = db.execute(
                 "INSERT INTO year_cards (slot, word, created_at, updated_at) VALUES (?, ?, ?, ?)",
                 [slot, "", Date().timeIntervalSince1970, Date().timeIntervalSince1970]
+            )
+        }
+        refresh()
+    }
+
+    private func seedWeekCardsIfNeeded() {
+        let count = (db.query("SELECT COUNT(*) AS c FROM week_cards").first?["c"] as? Int) ?? 0
+        guard count == 0 else { return }
+        for slot in 1...52 {
+            _ = db.execute(
+                "INSERT INTO week_cards (slot, title, note, created_at, updated_at) VALUES (?, '', '', ?, ?)",
+                [slot, Date().timeIntervalSince1970, Date().timeIntervalSince1970]
+            )
+        }
+        refresh()
+    }
+
+    private func loadWeekCards() -> [WeekCard] {
+        db.query("SELECT * FROM week_cards ORDER BY slot ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let slot = row["slot"] as? Int,
+                let title = row["title"] as? String,
+                let note = row["note"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return WeekCard(
+                id: id,
+                slot: slot,
+                title: title,
+                note: note,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func weekCard(_ c: WeekCard, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return c.title.lowercased().contains(q)
+            || c.note.lowercased().contains(q)
+            || c.monthName.lowercased().contains(q)
+            || "\(c.slot)".contains(q)
+            || c.dateRangeText.lowercased().contains(q)
+    }
+
+    func updateWeekCard(id: Int, title: String, note: String) {
+        _ = db.execute(
+            "UPDATE week_cards SET title = ?, note = ?, updated_at = ? WHERE id = ?",
+            [title, note, Date().timeIntervalSince1970, id]
+        )
+        if let index = weekCards.firstIndex(where: { $0.id == id }) {
+            weekCards[index].title = title
+            weekCards[index].note = note
+            weekCards[index].updatedAt = Date()
+        }
+    }
+
+    func exportWeeks() -> String? {
+        struct WeekDTO: Codable {
+            let slot: Int
+            let title: String
+            let note: String
+        }
+        let dtos = weekCards.sorted(by: { $0.slot < $1.slot }).map { WeekDTO(slot: $0.slot, title: $0.title, note: $0.note) }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(dtos) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    func importWeeks(fromJSON text: String) -> Int {
+        guard let data = text.data(using: .utf8) else { return 0 }
+        struct WeekDTO: Decodable {
+            let slot: Int
+            var title: String?
+            var note: String?
+        }
+        guard let dtos = try? JSONDecoder().decode([WeekDTO].self, from: data) else { return 0 }
+        let now = Date().timeIntervalSince1970
+        var updated = 0
+        for d in dtos {
+            let slot = d.slot
+            guard slot >= 1, slot <= 52 else { continue }
+            if let existing = weekCards.first(where: { $0.slot == slot }) {
+                let title = d.title ?? existing.title
+                let note = d.note ?? existing.note
+                _ = db.execute(
+                    "UPDATE week_cards SET title = ?, note = ?, updated_at = ? WHERE id = ?",
+                    [title, note, now, existing.id]
+                )
+                updated += 1
+            }
+        }
+        if updated > 0 { refresh() }
+        return updated
+    }
+
+    func resetWeekCards() {
+        _ = db.execute("DELETE FROM week_cards")
+        for slot in 1...52 {
+            _ = db.execute(
+                "INSERT INTO week_cards (slot, title, note, created_at, updated_at) VALUES (?, '', '', ?, ?)",
+                [slot, Date().timeIntervalSince1970, Date().timeIntervalSince1970]
             )
         }
         refresh()
