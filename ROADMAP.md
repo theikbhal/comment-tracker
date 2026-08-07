@@ -13,7 +13,10 @@
 - [x] Tracker (daily routines): Namaz/Quran/Zikr/Fasting/Jamaat/Family/Health/Business — checkboxes + counters, monthly calendar + notes, enable/disable, custom trackers
 - [x] Global ⌘K search across tabs, trackers, people, videos
 - [x] Thoughts board: three lists, single + bulk add (one per line), drag to reorder, "Pick for me" randomizer
+- [x] Wins feed: Twitter-style timeline, newest first, bookmark filter, pagination
+- [x] Backup & Restore (export / restore from Help)
 - [x] Onboarding + Help with settings
+- [x] Release log (CHANGELOG.md)
 - [x] Local SQLite storage
 - [x] App icon + bundle
 

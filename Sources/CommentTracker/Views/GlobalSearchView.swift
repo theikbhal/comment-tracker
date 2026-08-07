@@ -37,6 +37,10 @@ struct GlobalSearchView: View {
         store.thoughts.filter { store.thought($0, matches: query) }
     }
 
+    private var winResults: [Win] {
+        store.wins.filter { store.win($0, matches: query) }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             searchBar
@@ -96,7 +100,17 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty) {
+                    if winResults.count > 0 {
+                        section("Wins", icon: "party.popper") {
+                            ForEach(winResults) { w in
+                                row(icon: "party.popper.fill", color: .orange, title: w.text, subtitle: "Win · \(w.createdAt.formatted(date: .abbreviated, time: .omitted))") {
+                                    dismiss()
+                                    onNavigate(.wins)
+                                }
+                            }
+                        }
+                    }
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -148,6 +162,8 @@ struct GlobalSearchView: View {
             Text("\(videoResults.count) videos")
             Text("·")
             Text("\(thoughtResults.count) thoughts")
+            Text("·")
+            Text("\(winResults.count) wins")
         }
         .font(.caption)
         .foregroundStyle(.secondary)

@@ -360,6 +360,15 @@ struct Thought: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Wins (celebrated feed)
+
+struct Win: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var bookmarked: Bool
+    var createdAt: Date
+}
+
 // MARK: - Trackers (daily life routines)
 
 func dayString(_ date: Date) -> String {

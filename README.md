@@ -23,6 +23,8 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 - **Enable/disable any tracker** in Manage; add custom trackers with your own icon, color and target
 - **Global search (⌘K)** — search across tabs, trackers, people and videos
 - **Thoughts board (Trello-style)** — Long-term / This week / Doing lists; add one or a whole batch (one per line), drag to reorder, and hit **"Pick for me"** to let the dice choose when you can't decide
+- **Wins feed (Twitter-style)** — celebrate small wins as they happen (newest on top), bookmark the ones that matter and filter to them; "Show older" paginates the timeline
+- **Backup & Restore** — export the whole database to a file anytime, restore from any previous backup (Help → Backup & Restore)
 - **Local SQLite storage** — nothing leaves the machine
 - **First-run onboarding**, Help screen with settings, and keyboard shortcuts
 - Custom app icon

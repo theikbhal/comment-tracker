@@ -27,6 +27,8 @@ final class Store: ObservableObject {
 
     @Published var thoughts: [Thought] = []
 
+    @Published var wins: [Win] = []
+
     @Published var trackers: [Tracker] = []
     @Published var trackerEntries: [TrackerEntry] = []
     @Published var trackerToDetail: Tracker?
@@ -68,6 +70,7 @@ final class Store: ObservableObject {
         videos = loadVideos()
         videoComments = loadVideoComments()
         thoughts = loadThoughts()
+        wins = loadWins()
         trackers = loadTrackers()
         trackerEntries = loadTrackerEntries()
     }
@@ -448,6 +451,50 @@ final class Store: ObservableObject {
         thoughts.isEmpty ? nil : thoughts.randomElement()
     }
 
+    // MARK: - Wins
+
+    func win(_ w: Win, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return w.text.lowercased().contains(query.lowercased())
+    }
+
+    func addWin(text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO wins (text, bookmarked, created_at) VALUES (?, 0, ?)",
+            [trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteWin(_ id: Int) {
+        _ = db.execute("DELETE FROM wins WHERE id = ?", [id])
+        refresh()
+    }
+
+    func toggleWinBookmark(_ id: Int) -> Bool {
+        guard let w = wins.first(where: { $0.id == id }) else { return false }
+        let newValue = w.bookmarked ? 0 : 1
+        _ = db.execute("UPDATE wins SET bookmarked = ? WHERE id = ?", [newValue, id])
+        refresh()
+        return newValue == 1
+    }
+
+    // MARK: - Backup & Restore
+
+    @discardableResult
+    func backup(to url: URL) -> Bool {
+        db.backup(to: url)
+    }
+
+    @discardableResult
+    func restore(from url: URL) -> Bool {
+        let ok = db.restore(from: url)
+        if ok { load() }
+        return ok
+    }
+
     // MARK: - Trackers
 
     var enabledTrackers: [Tracker] {
@@ -796,6 +843,22 @@ final class Store: ObservableObject {
                 id: id,
                 personId: personID,
                 body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadWins() -> [Win] {
+        db.query("SELECT * FROM wins ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Win(
+                id: id,
+                text: text,
+                bookmarked: (row["bookmarked"] as? Int ?? 0) == 1,
                 createdAt: Date(timeIntervalSince1970: created)
             )
         }

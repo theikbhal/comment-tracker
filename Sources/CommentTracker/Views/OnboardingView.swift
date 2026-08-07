@@ -240,6 +240,10 @@ struct OnboardingView: View {
                     .font(.caption)
                 Text("Thoughts keeps your good ideas in a Trello board — hit “Pick for me” when stuck.")
                     .font(.caption)
+                Text("Wins is your feed — celebrate wins as they happen, bookmark the big ones.")
+                    .font(.caption)
+                Text("Back up anytime from Help → Backup & Restore so your data is never lost.")
+                    .font(.caption)
                 Text("Press ⌘K to search everything in the app.")
                     .font(.caption)
             }

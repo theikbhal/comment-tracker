@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 struct HelpView: View {
     @EnvironmentObject var store: Store
@@ -6,6 +8,7 @@ struct HelpView: View {
     @State private var subGoalText: String = ""
     @State private var peopleGoalText: String = ""
     @State private var showDataPath = false
+    @State private var backupMessage = ""
 
     var body: some View {
         ScrollView {
@@ -24,10 +27,12 @@ struct HelpView: View {
                 howToCard
                 trackerCard
                 thoughtsCard
+                winsCard
                 videosCard
                 searchCard
                 shortcutsCard
                 dataCard
+                backupCard
                 roadmapCard
                 aboutCard
             }
@@ -196,6 +201,19 @@ struct HelpView: View {
         .card()
     }
 
+    private var winsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Wins — celebrate the small stuff", systemImage: "party.popper")
+                .font(.headline)
+            Text("A Twitter/X-style timeline of your wins. Newest at the top, older below. Bookmark the ones that matter and filter to them anytime.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("• Just won something? Type it in the compose box and hit Celebrate.")
+                    .font(.caption)
+        }
+        .card()
+    }
+
     private var videosCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Videos board", systemImage: "play.rectangle")
@@ -246,6 +264,73 @@ struct HelpView: View {
             .help("Local SQLite file")
         }
         .card()
+    }
+
+    private var backupCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Backup & Restore", systemImage: "externaldrive.badge.checkmark")
+                .font(.headline)
+            Text("Everything lives in one SQLite file. Back it up anytime, and restore from any previous backup to bring your data back — nothing is ever lost.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                Button {
+                    exportBackup()
+                } label: {
+                    Label("Backup now…", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.borderedProminent)
+                .help("Save a full copy of your data as a .sqlite file")
+                Button {
+                    importBackup()
+                } label: {
+                    Label("Restore…", systemImage: "arrow.uturn.backward")
+                }
+                .buttonStyle(.bordered)
+                .help("Replace your data from a previous backup .sqlite file")
+                if !backupMessage.isEmpty {
+                    Text(backupMessage)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .card()
+    }
+
+    private func exportBackup() {
+        let panel = NSSavePanel()
+        panel.title = "Back up Comment Tracker data"
+        panel.nameFieldStringValue = "CommentTracker-backup-\(backupStamp()).sqlite"
+        panel.allowedContentTypes = [.data]
+        if panel.runModal() == .OK, let url = panel.url {
+            backupMessage = store.backup(to: url) ? "Backup saved ✓" : "Backup failed"
+        }
+    }
+
+    private func importBackup() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose a backup to restore"
+        panel.allowedContentTypes = [.data]
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Restore this backup?"
+        alert.informativeText = "Your current data will be replaced with the backup. Your current data is kept as a safety copy (comments-pre-restore.sqlite). This cannot be undone."
+        alert.addButton(withTitle: "Restore")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        backupMessage = store.restore(from: url) ? "Restored ✓" : "Restore failed"
+    }
+
+    private func backupStamp() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f.string(from: Date())
     }
 
     private var roadmapCard: some View {

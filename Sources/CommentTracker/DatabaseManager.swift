@@ -94,6 +94,12 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS wins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            bookmarked INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS trackers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -182,6 +188,40 @@ final class DatabaseManager {
             default:
                 sqlite3_bind_null(stmt, idx)
             }
+        }
+    }
+
+    // MARK: - Backup & Restore
+
+    func backup(to url: URL) -> Bool {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "VACUUM INTO ?", -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, url.path, -1, SQLITE_TRANSIENT)
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
+    func restore(from url: URL) -> Bool {
+        sqlite3_close(db)
+        db = nil
+        let safety = databaseURL.deletingPathExtension().appendingPathExtension("pre-restore.sqlite")
+        try? FileManager.default.removeItem(at: safety)
+        try? FileManager.default.copyItem(at: databaseURL, to: safety)
+        try? FileManager.default.removeItem(at: databaseURL)
+        do {
+            try FileManager.default.copyItem(at: url, to: databaseURL)
+        } catch {
+            try? FileManager.default.copyItem(at: safety, to: databaseURL)
+            open()
+            return false
+        }
+        open()
+        return true
+    }
+
+    private func open() {
+        if sqlite3_open(databaseURL.path, &db) == SQLITE_OK {
+            migrate()
         }
     }
 
