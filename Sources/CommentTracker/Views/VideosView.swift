@@ -244,6 +244,7 @@ struct VideoCardView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Spacer()
+                moveMenu
             }
             if !video.note.isEmpty {
                 Text(video.note)
@@ -292,6 +293,46 @@ struct VideoCardView: View {
         .onDrag {
             return NSItemProvider(object: "\(video.id)" as NSString)
         }
+        .contextMenu {
+            moveMenu
+            Divider()
+            Button {
+                store.videoToDetail = video
+            } label: {
+                Label("Open details…", systemImage: "arrow.up.forward.square")
+            }
+            Divider()
+            Button(role: .destructive) {
+                store.deleteVideo(video.id)
+            } label: {
+                Label("Delete video", systemImage: "trash")
+            }
+        }
+    }
+
+    private var moveMenu: some View {
+        Menu {
+            ForEach(VideoStage.allCases) { s in
+                Button {
+                    store.moveVideo(video.id, to: s, at: store.videosForStage(s).count)
+                } label: {
+                    if s == video.stage {
+                        Label(s.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(s.displayName)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.left.arrow.right.circle")
+                .font(.system(size: 13))
+                .foregroundStyle(video.stage.color)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Move to another list")
     }
 }
 
