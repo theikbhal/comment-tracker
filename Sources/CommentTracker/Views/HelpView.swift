@@ -32,6 +32,7 @@ struct HelpView: View {
                 projectCard
                 deepWorkCard
                 scheduleCard
+                mindMapCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -230,6 +231,17 @@ struct HelpView: View {
             Label("Schedule — when to work, what to work on", systemImage: "calendar.badge.clock")
                 .font(.headline)
             Text("A weekly grid across 7 days and 4 time slots (Morning / Noon / Afternoon / Evening). Click a cell to plan what you'll work on then; today's column is highlighted.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var mindMapCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Mini Mind Map — visual idea webs", systemImage: "point.3.connected.trianglepath.dotted")
+                .font(.headline)
+            Text("Create maps and add child nodes to any node (via + or right-click). Drag nodes to rearrange them; lines follow automatically. Double-click a node to rename or recolor it. Right-click to add a child, change color, or delete a whole branch.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

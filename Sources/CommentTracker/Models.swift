@@ -580,6 +580,45 @@ struct UrgentItem: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Mini Mind Map
+
+struct MindMap: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+let mindMapColorNames = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "teal", "gray"]
+
+func mindMapColor(_ name: String) -> Color {
+    switch name {
+    case "red": return .red
+    case "orange": return .orange
+    case "yellow": return .yellow
+    case "green": return .green
+    case "purple": return .purple
+    case "pink": return .pink
+    case "teal": return .teal
+    case "gray": return .gray
+    default: return .blue
+    }
+}
+
+struct MindMapNode: Identifiable, Equatable {
+    let id: Int
+    var mapId: Int
+    var parentId: Int?
+    var text: String
+    var color: String
+    var x: Double
+    var y: Double
+    var createdAt: Date
+    var updatedAt: Date
+
+    var isRoot: Bool { parentId == nil }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

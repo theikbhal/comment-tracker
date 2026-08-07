@@ -38,6 +38,8 @@ final class Store: ObservableObject {
     @Published var schedule: [ScheduleEntry] = []
     @Published var holding: [HoldingItem] = []
     @Published var urgent: [UrgentItem] = []
+    @Published var mindMaps: [MindMap] = []
+    @Published var mindMapNodes: [MindMapNode] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -99,6 +101,8 @@ final class Store: ObservableObject {
         schedule = loadSchedule()
         holding = loadHolding()
         urgent = loadUrgent()
+        mindMaps = loadMindMaps()
+        mindMapNodes = loadMindMapNodes()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -904,6 +908,124 @@ final class Store: ObservableObject {
         for (i, item) in ordered.enumerated() {
             _ = db.execute("UPDATE urgent SET position = ?, updated_at = ? WHERE id = ?", [i, Date().timeIntervalSince1970, item.id])
         }
+    }
+
+    // MARK: - Mini Mind Map
+
+    func mindMapNode(_ n: MindMapNode, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return n.text.lowercased().contains(query.lowercased())
+    }
+
+    func mindMap(_ m: MindMap, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return m.title.lowercased().contains(query.lowercased())
+    }
+
+    func nodesForMap(_ mapID: Int) -> [MindMapNode] {
+        mindMapNodes.filter { $0.mapId == mapID }
+    }
+
+    func rootNode(for mapID: Int) -> MindMapNode? {
+        nodesForMap(mapID).first { $0.isRoot }
+    }
+
+    func children(of nodeID: Int, in mapID: Int) -> [MindMapNode] {
+        nodesForMap(mapID).filter { $0.parentId == nodeID }
+    }
+
+    func addMindMap(title: String = "Untitled Map") -> Int {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = trimmed.isEmpty ? "Untitled Map" : trimmed
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO mindmaps (title, created_at, updated_at) VALUES (?, ?, ?)",
+            [name, now, now]
+        )
+        let mapID = db.lastInsertID()
+        _ = db.execute(
+            "INSERT INTO mindmap_nodes (map_id, parent_id, text, color, x, y, created_at, updated_at) VALUES (?, NULL, 'Main idea', 'blue', ?, ?, ?, ?)",
+            [mapID, Double(900), Double(600), now, now]
+        )
+        refresh()
+        return mapID
+    }
+
+    func renameMindMap(id: Int, title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE mindmaps SET title = ?, updated_at = ? WHERE id = ?",
+            [trimmed, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteMindMap(_ id: Int) {
+        _ = db.execute("DELETE FROM mindmap_nodes WHERE map_id = ?", [id])
+        _ = db.execute("DELETE FROM mindmaps WHERE id = ?", [id])
+        refresh()
+    }
+
+    func addMindMapNode(mapID: Int, parentID: Int, text: String = "") {
+        let now = Date().timeIntervalSince1970
+        guard let parent = mindMapNodes.first(where: { $0.id == parentID }) else { return }
+        let children = children(of: parentID, in: mapID)
+        let offset = Double(children.count) * 150.0 - Double(children.count) * 30.0
+        let x = parent.x + 230
+        let y = parent.y + offset - Double(children.count) * 60.0 + 60.0
+        _ = db.execute(
+            "INSERT INTO mindmap_nodes (map_id, parent_id, text, color, x, y, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [mapID, parentID, text, parent.color, x, y, now, now]
+        )
+        refresh()
+    }
+
+    func updateMindMapNodeText(_ id: Int, text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = db.execute(
+            "UPDATE mindmap_nodes SET text = ?, updated_at = ? WHERE id = ?",
+            [trimmed, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func updateMindMapNodeColor(_ id: Int, color: String) {
+        _ = db.execute(
+            "UPDATE mindmap_nodes SET color = ?, updated_at = ? WHERE id = ?",
+            [color, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveMindMapNode(_ id: Int, x: Double, y: Double) {
+        _ = db.execute(
+            "UPDATE mindmap_nodes SET x = ?, y = ?, updated_at = ? WHERE id = ?",
+            [x, y, Date().timeIntervalSince1970, id]
+        )
+        if let idx = mindMapNodes.firstIndex(where: { $0.id == id }) {
+            let n = mindMapNodes[idx]
+            mindMapNodes[idx] = MindMapNode(
+                id: n.id, mapId: n.mapId, parentId: n.parentId, text: n.text, color: n.color,
+                x: x, y: y, createdAt: n.createdAt, updatedAt: Date()
+            )
+        }
+    }
+
+    func deleteMindMapNode(_ id: Int) {
+        var toDelete: [Int] = [id]
+        var queue = [id]
+        while !queue.isEmpty {
+            let current = queue.removeFirst()
+            for child in mindMapNodes where child.parentId == current {
+                toDelete.append(child.id)
+                queue.append(child.id)
+            }
+        }
+        for nodeID in toDelete {
+            _ = db.execute("DELETE FROM mindmap_nodes WHERE id = ?", [nodeID])
+        }
+        refresh()
     }
 
     // MARK: - Backup & Restore
@@ -1820,6 +1942,48 @@ final class Store: ObservableObject {
                 note: note,
                 position: position,
                 done: (row["done"] as? Int ?? 0) == 1,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadMindMaps() -> [MindMap] {
+        db.query("SELECT * FROM mindmaps ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return MindMap(
+                id: id,
+                title: title,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadMindMapNodes() -> [MindMapNode] {
+        db.query("SELECT * FROM mindmap_nodes").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let mapID = row["map_id"] as? Int,
+                let text = row["text"] as? String,
+                let x = row["x"] as? Double,
+                let y = row["y"] as? Double,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return MindMapNode(
+                id: id,
+                mapId: mapID,
+                parentId: row["parent_id"] as? Int,
+                text: text,
+                color: row["color"] as? String ?? "blue",
+                x: x,
+                y: y,
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated)
             )

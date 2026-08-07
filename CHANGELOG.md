@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.10.0]
+
+### Added
+- New **Mini Mind Map** tab: visual idea webs with multiple maps. Add child nodes to any node (right-click or double-click), drag to rearrange with live connector lines, rename and recolor nodes, delete whole branches.
+
 ## [v1.9.0]
 
 ### Added

@@ -81,6 +81,14 @@ struct GlobalSearchView: View {
         store.urgent.filter { store.urgentItem($0, matches: query) }
     }
 
+    private var mindMapResults: [MindMap] {
+        store.mindMaps.filter { store.mindMap($0, matches: query) }
+    }
+
+    private var mindMapNodeResults: [MindMapNode] {
+        store.mindMapNodes.filter { store.mindMapNode($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -192,6 +200,22 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if mindMapResults.count > 0 || mindMapNodeResults.count > 0 {
+                        section("Mind Map", icon: "point.3.connected.trianglepath.dotted") {
+                            ForEach(mindMapResults) { m in
+                                row(icon: "point.3.connected.trianglepath.dotted", color: .purple, title: m.title, subtitle: "Map · \(m.updatedAt.formatted(date: .abbreviated, time: .omitted))") {
+                                    dismiss()
+                                    onNavigate(.mindmap)
+                                }
+                            }
+                            ForEach(mindMapNodeResults) { n in
+                                row(icon: "point.3.connected.trianglepath.dotted", color: mindMapColor(n.color), title: n.text, subtitle: "Mind map node") {
+                                    dismiss()
+                                    onNavigate(.mindmap)
+                                }
+                            }
+                        }
+                    }
                     if trackerResults.count > 0 {
                         section("Trackers", icon: "checklist") {
                             ForEach(trackerResults) { t in
@@ -292,7 +316,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -367,6 +391,8 @@ struct GlobalSearchView: View {
             Text("·")
             Text("\(urgentResults.count) urgent")
             Text("·")
+            Text("\(mindMapResults.count + mindMapNodeResults.count) mind map")
+            Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
             Text("\(sprintResults.count) sprints")
@@ -423,7 +449,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, urgent, holding, projects, schedule, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, urgent, holding, mind maps, projects, schedule, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
