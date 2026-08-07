@@ -24,6 +24,7 @@ struct HelpView: View {
                 goalCard
                 subGoalCard
                 peopleGoalCard
+                buckCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -136,6 +137,17 @@ struct HelpView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        }
+        .card()
+    }
+
+    private var buckCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Buck Track — what we're working on", systemImage: "hammer.fill")
+                .font(.headline)
+            Text("A three-column board: In Flight, On Hold, Done. Everything you're working on lives here. Add it at the top, drag cards between columns (or use right-click), and keep notes on each bucket.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .card()
     }

@@ -30,6 +30,7 @@ final class Store: ObservableObject {
     @Published var wins: [Win] = []
     @Published var fails: [Fail] = []
     @Published var interNotes: [InterNote] = []
+    @Published var bucks: [Buck] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -83,6 +84,7 @@ final class Store: ObservableObject {
         wins = loadWins()
         fails = loadFails()
         interNotes = loadInterNotes()
+        bucks = loadBucks()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -548,6 +550,50 @@ final class Store: ObservableObject {
 
     func deleteInterNote(_ id: Int) {
         _ = db.execute("DELETE FROM interstitial_notes WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Buck Track
+
+    func buckActiveCount(_ q: String) -> Int {
+        fetchBucksFiltered(q).filter { $0.status == .active }.count
+    }
+
+    func buck(_ b: Buck, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return b.title.lowercased().contains(q) || b.notes.lowercased().contains(q)
+    }
+
+    func addBuck(title: String, notes: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let next = (bucks.map(\.position).max() ?? 0) + 1
+        _ = db.execute(
+            "INSERT INTO bucks (title, status, notes, position, created_at, updated_at) VALUES (?, 'active', ?, ?, ?, ?)",
+            [trimmed, notes, next, Date().timeIntervalSince1970, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func setBuckStatus(_ id: Int, _ status: BuckStatus) {
+        _ = db.execute(
+            "UPDATE bucks SET status = ?, updated_at = ? WHERE id = ?",
+            [status.rawValue, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func updateBuckNote(_ id: Int, notes: String) {
+        _ = db.execute(
+            "UPDATE bucks SET notes = ?, updated_at = ? WHERE id = ?",
+            [notes, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteBuck(_ id: Int) {
+        _ = db.execute("DELETE FROM bucks WHERE id = ?", [id])
         refresh()
     }
 
@@ -1312,6 +1358,38 @@ final class Store: ObservableObject {
                 let created = row["created_at"] as? Double
             else { return nil }
             return InterNote(id: id, text: text, createdAt: Date(timeIntervalSince1970: created))
+        }
+    }
+
+    private func fetchBucksFiltered(_ q: String) -> [Buck] {
+        let query = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        let all = loadBucks()
+        guard !query.isEmpty else { return all }
+        return all.filter { buck($0, matches: query) }
+    }
+
+    private func loadBucks() -> [Buck] {
+        let order = "CASE status WHEN 'active' THEN 0 WHEN 'paused' THEN 1 ELSE 2 END"
+        return db.query("SELECT * FROM bucks ORDER BY \(order), updated_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let statusRaw = row["status"] as? String,
+                let notes = row["notes"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            let status = BuckStatus(rawValue: statusRaw) ?? .active
+            return Buck(
+                id: id,
+                title: title,
+                status: status,
+                notes: notes,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
         }
     }
 

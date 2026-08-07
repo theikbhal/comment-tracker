@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.6.0]
+
+### Added
+- New **Buck Track** tab (pinned near the top): a three-column board — In Flight / On Hold / Done — that shows everything we're working on. Add a bucket at the top, drag cards between columns or move them from the right-click menu, and attach/edit notes on each. Search finds buckets anywhere.
+
 ## [v1.5.1]
 
 ### Added

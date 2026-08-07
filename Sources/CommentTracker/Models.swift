@@ -386,6 +386,46 @@ struct InterNote: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Buck (what we're working on)
+
+enum BuckStatus: String, CaseIterable {
+    case active, paused, done
+
+    var displayName: String {
+        switch self {
+        case .active: return "In Flight"
+        case .paused: return "On Hold"
+        case .done: return "Done"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .active: return "bolt.fill"
+        case .paused: return "pause.fill"
+        case .done: return "checkmark.seal.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .active: return .blue
+        case .paused: return .orange
+        case .done: return .green
+        }
+    }
+}
+
+struct Buck: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var status: BuckStatus
+    var notes: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

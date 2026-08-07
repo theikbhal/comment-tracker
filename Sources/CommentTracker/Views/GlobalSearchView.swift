@@ -49,6 +49,10 @@ struct GlobalSearchView: View {
         store.interNotes.filter { store.interNote($0, matches: query) }
     }
 
+    private var buckResults: [Buck] {
+        store.bucks.filter { store.buck($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -76,6 +80,16 @@ struct GlobalSearchView: View {
                                 row(icon: item.symbol, color: .blue, title: item.title, subtitle: "Open \(item.title)") {
                                     dismiss()
                                     onNavigate(item)
+                                }
+                            }
+                        }
+                    }
+                    if buckResults.count > 0 {
+                        section("Buck Track", icon: "hammer.fill") {
+                            ForEach(buckResults) { b in
+                                row(icon: "hammer.fill", color: b.status.color, title: b.title, subtitle: b.status.displayName) {
+                                    dismiss()
+                                    onNavigate(.bucket)
                                 }
                             }
                         }
@@ -180,7 +194,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -239,6 +253,8 @@ struct GlobalSearchView: View {
             Text("·")
             Text("\(noteResults.count) notes")
             Text("·")
+            Text("\(buckResults.count) buckets")
+            Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
             Text("\(sprintResults.count) sprints")
@@ -295,7 +311,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search tabs, trackers, people, videos, thoughts, wins, fails, notes, cards, sprints and links" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, trackers, people, videos, thoughts, wins, fails, notes, cards, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
