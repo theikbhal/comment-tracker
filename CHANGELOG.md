@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.26.0]
+
+### Added
+- **Reddit tab**: your own little community. Post threads with a title, markdown body, and a sub tag; upvote and downvote. Open any post for a comments feed with nested reply threads.
+
 ## [v1.25.0]
 
 ### Added

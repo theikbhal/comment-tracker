@@ -1035,6 +1035,33 @@ struct HostedVideoComment: Identifiable, Equatable {
     var isReply: Bool { parentId != nil }
 }
 
+// MARK: - Mini Reddit
+
+struct RedditPost: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var body: String
+    var sub: String
+    var votes: Int
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var subText: String {
+        sub.isEmpty ? "r/self" : "r/\(sub)"
+    }
+}
+
+struct RedditComment: Identifiable, Equatable {
+    let id: Int
+    var postId: Int
+    var parentId: Int?
+    var body: String
+    var createdAt: Date
+
+    var isReply: Bool { parentId != nil }
+}
+
 // MARK: - Family
 
 struct FamilyMember: Identifiable, Equatable {

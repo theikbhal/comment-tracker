@@ -70,6 +70,8 @@ final class Store: ObservableObject {
     @Published var airtableCells: [AirtableCell] = []
     @Published var hostedVideos: [HostedVideo] = []
     @Published var hostedVideoComments: [HostedVideoComment] = []
+    @Published var redditPosts: [RedditPost] = []
+    @Published var redditComments: [RedditComment] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -188,6 +190,8 @@ final class Store: ObservableObject {
         airtableCells = loadAirtableCells()
         hostedVideos = loadHostedVideos()
         hostedVideoComments = loadHostedVideoComments()
+        redditPosts = loadRedditPosts()
+        redditComments = loadRedditComments()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -4117,6 +4121,120 @@ final class Store: ObservableObject {
     func deleteHostedVideoComment(_ id: Int) {
         _ = db.execute("DELETE FROM hosted_video_comments WHERE id = ?", [id])
         _ = db.execute("DELETE FROM hosted_video_comments WHERE parent_id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Mini Reddit
+
+    private func loadRedditPosts() -> [RedditPost] {
+        db.query("SELECT * FROM reddit_posts ORDER BY votes DESC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let body = row["body"] as? String,
+                let sub = row["sub"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return RedditPost(
+                id: id,
+                title: title,
+                body: body,
+                sub: sub,
+                votes: row["votes"] as? Int ?? 0,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadRedditComments() -> [RedditComment] {
+        db.query("SELECT * FROM reddit_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let postID = row["post_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return RedditComment(
+                id: id,
+                postId: postID,
+                parentId: row["parent_id"] as? Int,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func redditPost(_ p: RedditPost, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return p.title.lowercased().contains(q) || p.body.lowercased().contains(q) || p.sub.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addRedditPost(title: String, body: String, sub: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO reddit_posts (title, body, sub, votes, position, created_at, updated_at) VALUES (?, ?, ?, 0, 0, ?, ?)",
+            [trimmed, body, sub, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateRedditPost(id: Int, title: String, body: String, sub: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE reddit_posts SET title = ?, body = ?, sub = ?, updated_at = ? WHERE id = ?",
+            [trimmed, body, sub, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func voteRedditPost(id: Int, delta: Int) {
+        guard let post = redditPosts.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE reddit_posts SET votes = ?, updated_at = ? WHERE id = ?", [max(0, post.votes + delta), Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func deleteRedditPost(_ id: Int) {
+        _ = db.execute("DELETE FROM reddit_posts WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM reddit_comments WHERE post_id = ?", [id])
+        refresh()
+    }
+
+    func redditComments(for postID: Int) -> [RedditComment] {
+        redditComments.filter { $0.postId == postID }
+    }
+
+    func topLevelRedditComments(for postID: Int) -> [RedditComment] {
+        redditComments(for: postID).filter { !$0.isReply }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func redditReplies(to commentID: Int) -> [RedditComment] {
+        redditComments.filter { $0.parentId == commentID }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addRedditComment(postID: Int, parentID: Int?, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO reddit_comments (post_id, parent_id, body, created_at) VALUES (?, ?, ?, ?)",
+            [postID, parentID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteRedditComment(_ id: Int) {
+        _ = db.execute("DELETE FROM reddit_comments WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM reddit_comments WHERE parent_id = ?", [id])
         refresh()
     }
 

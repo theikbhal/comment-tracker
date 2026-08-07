@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -38,6 +38,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .thoughts: return "Thoughts"
         case .videos: return "Videos"
         case .hosting: return "Mini Videos"
+        case .reddit: return "Reddit"
         case .wins: return "Wins"
         case .fails: return "Fails"
         case .notes: return "Notes"
@@ -85,6 +86,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .thoughts: return "lightbulb"
         case .videos: return "play.rectangle"
         case .hosting: return "video.fill"
+        case .reddit: return "bubble.left.and.bubble.right.fill"
         case .wins: return "party.popper"
         case .fails: return "xmark.seal"
         case .notes: return "note.text"
@@ -190,6 +192,7 @@ struct ContentView: View {
         case .thoughts: ThoughtsView()
         case .videos: VideosView()
         case .hosting: HostedVideosView()
+        case .reddit: RedditView()
         case .wins: WinsView()
         case .fails: FailsView()
         case .notes: InterstitialNotesView()

@@ -47,6 +47,7 @@ struct HelpView: View {
                 tableTrackerCard
                 airtableCard
                 miniVideosCard
+                redditCard
                 pendingCard
                 dietCard
                 familyCard
@@ -415,6 +416,17 @@ struct HelpView: View {
             Label("Mini Videos — host your own", systemImage: "video.fill")
                 .font(.headline)
             Text("Paste a YouTube link and it plays right in the app with a thumbnail. Each video has a title, a markdown description, and a comments feed with nested reply threads.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var redditCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Reddit — your own little community", systemImage: "bubble.left.and.bubble.right.fill")
+                .font(.headline)
+            Text("Post threads with a title, markdown body, and a sub tag. Upvote and downvote, and open any post for a comments feed with nested reply threads.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
