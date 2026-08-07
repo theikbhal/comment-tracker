@@ -271,6 +271,14 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS alarms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT NOT NULL DEFAULT '',
+            fire_at REAL NOT NULL,
+            fired INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS challenge_comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             challenge_id INTEGER NOT NULL,

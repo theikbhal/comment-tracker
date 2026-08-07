@@ -40,6 +40,7 @@ struct HelpView: View {
                 weekCard
                 challengeCard
                 roadmapFeatureCard
+                alarmsCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -326,6 +327,17 @@ struct HelpView: View {
             Label("Roadmap — plan across quarters", systemImage: "map.fill")
                 .font(.headline)
             Text("Plan big work in Planned / In Progress / Done / Deferred columns. Each item has a quarter label, a priority (high/medium/low), and a markdown note with clickable links. Move items between columns via the arrows menu.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var alarmsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Alarms — plain-English reminders", systemImage: "alarm.fill")
+                .font(.headline)
+            Text("Just type it: \"15 minutes\", \"1 hour\", \"2pm\", \"8.30pm\". Alarms fire as notifications in the background — even on another tab or with the app closed. Quick presets for 15/30/50 min and 1 hour; snooze any alarm by 5 minutes.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

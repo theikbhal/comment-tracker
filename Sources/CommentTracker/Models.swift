@@ -975,6 +975,151 @@ struct PomodoroSession: Identifiable, Equatable {
     var endedAt: Date?
 }
 
+// MARK: - Alarms
+
+struct AlarmItem: Identifiable, Equatable {
+    let id: Int
+    var label: String
+    var fireAt: Date
+    var fired: Bool
+    var createdAt: Date
+    var updatedAt: Date
+
+    var timeText: String {
+        fireAt.formatted(date: .omitted, time: .shortened)
+    }
+
+    func countdownText(now: Date) -> String {
+        let secs = Int(fireAt.timeIntervalSince(now))
+        guard secs > 0 else { return "Now" }
+        if secs < 60 { return "in \(secs)s" }
+        let m = secs / 60
+        if m < 60 { return "in \(m)m" }
+        let h = m / 60
+        let mm = m % 60
+        return mm == 0 ? "in \(h)h" : "in \(h)h \(mm)m"
+    }
+}
+
+let alarmQuickPresets: [(String, TimeInterval)] = [
+    ("15 min", 15 * 60),
+    ("30 min", 30 * 60),
+    ("50 min", 50 * 60),
+    ("1 hour", 60 * 60)
+]
+
+/// Parse a natural-language alarm input into an absolute fire date.
+/// Supports: "15 minutes", "30 min", "1 hour", "in 2 hours",
+/// "2pm", "2 pm", "3.pm", "5p", "8.30pm", "9:45am".
+func parseAlarmInput(_ text: String) -> Date? {
+    var t = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !t.isEmpty else { return nil }
+    t = t.replacingOccurrences(of: " in ", with: " ")
+
+    let cal = Calendar.current
+    let now = Date()
+
+    switch t {
+    case "noon", "12pm", "12 pm":
+        return cal.date(bySettingHour: 12, minute: 0, second: 0, of: now).flatMap(ensureFuture)
+    case "midnight", "12am", "12 am":
+        return cal.date(bySettingHour: 0, minute: 0, second: 0, of: now).flatMap(ensureFuture)
+    default:
+        break
+    }
+
+    // Clock times: "2pm", "2 pm", "3.pm", "5p", "8.30pm", "9:45 am", "noon", "midnight"
+    let hasMeridian = t.contains("pm") || t.contains("am") || t.hasSuffix("p") || t.hasSuffix("a")
+    if hasMeridian {
+        let meridian: String
+        var strip = ""
+        if t.contains("pm") {
+            meridian = "pm"
+            strip = "pm"
+        } else if t.contains("am") {
+            meridian = "am"
+            strip = "am"
+        } else if t.hasSuffix("p") {
+            meridian = "pm"
+            strip = "p"
+        } else {
+            meridian = "am"
+            strip = "a"
+        }
+        let cleaned = t
+            .replacingOccurrences(of: strip, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ".", with: ":")
+            .replacingOccurrences(of: ",", with: ":")
+
+        guard !cleaned.isEmpty else { return nil }
+        let parts = cleaned.split(separator: ":").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        guard let hour = parts.first, hour >= 1, hour <= 12 else { return nil }
+        let minute = parts.count > 1 ? parts[1] : 0
+        guard minute >= 0, minute <= 59 else { return nil }
+
+        var h = hour
+        if meridian == "pm", hour < 12 { h = hour + 12 }
+        if meridian == "am", hour == 12 { h = 0 }
+        guard h >= 0, h <= 23 else { return nil }
+
+        guard let base = cal.date(bySettingHour: h, minute: minute, second: 0, of: now) else { return nil }
+        if base <= now {
+            return cal.date(byAdding: .day, value: 1, to: base)
+        }
+        return base
+    }
+
+    // Relative durations: "15 minutes", "50min", "1 hour", "2 hours", "90 mins"
+    if let minutes = parseDurationMinutes(t) {
+        return Date().addingTimeInterval(Double(minutes) * 60)
+    }
+
+    return nil
+}
+
+private func parseDurationMinutes(_ text: String) -> Int? {
+    let patterns: [NSRegularExpression] = [
+        try! NSRegularExpression(pattern: "(\\d+)\\s*(hour|hr|h)s?", options: []),
+        try! NSRegularExpression(pattern: "(\\d+)\\s*(minute|min|m)s?", options: [])
+    ]
+    let ns = text as NSString
+    var hours = 0
+    var minutes = 0
+    var found = false
+    for pattern in patterns {
+        let matches = pattern.matches(in: text, options: [], range: NSRange(location: 0, length: ns.length))
+        for match in matches {
+            guard let range = Range(match.range(at: 1), in: text), let value = Int(text[range]) else { continue }
+            let unit = text[Range(match.range(at: 2), in: text)!].lowercased()
+            if unit.hasPrefix("h") {
+                hours += value
+            } else {
+                minutes += value
+            }
+            found = true
+        }
+    }
+    guard found else { return nil }
+    return hours * 60 + minutes
+}
+
+private func ensureFuture(_ date: Date) -> Date? {
+    date > Date() ? date : Calendar.current.date(byAdding: .day, value: 1, to: date)
+}
+
+func alarmDescription(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    if Calendar.current.isDateInToday(date) {
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return "today at \(formatter.string(from: date))"
+    }
+    formatter.dateStyle = .short
+    formatter.timeStyle = .short
+    return formatter.string(from: date)
+}
+
 // MARK: - Sprints
 
 enum SprintPreset: Int, CaseIterable, Identifiable {

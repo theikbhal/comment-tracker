@@ -51,6 +51,7 @@ final class Store: ObservableObject {
     @Published var challenges: [Challenge] = []
     @Published var challengeComments: [ChallengeComment] = []
     @Published var challengePrerequisiteLinks: [ChallengePrerequisiteLink] = []
+    @Published var alarms: [AlarmItem] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -114,6 +115,7 @@ final class Store: ObservableObject {
         seedWeekCardsIfNeeded()
         refresh()
         syncCalendarReminders()
+        syncAlarmNotifications()
     }
 
     func refresh() {
@@ -149,6 +151,7 @@ final class Store: ObservableObject {
         challenges = loadChallenges()
         challengeComments = loadChallengeComments()
         challengePrerequisiteLinks = loadChallengePrerequisiteLinks()
+        alarms = loadAlarms()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -2857,6 +2860,103 @@ final class Store: ObservableObject {
     func removePrerequisite(linkID: Int) {
         _ = db.execute("DELETE FROM challenge_prerequisites WHERE id = ?", [linkID])
         refresh()
+    }
+
+    // MARK: - Alarms
+
+    var activeAlarms: [AlarmItem] {
+        alarms.filter { !$0.fired && $0.fireAt > Date() }.sorted { $0.fireAt < $1.fireAt }
+    }
+
+    var firedAlarms: [AlarmItem] {
+        alarms.filter { $0.fired || $0.fireAt <= Date() }.sorted { $0.fireAt > $1.fireAt }
+    }
+
+    private func loadAlarms() -> [AlarmItem] {
+        db.query("SELECT * FROM alarms ORDER BY fire_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let label = row["label"] as? String,
+                let fire = row["fire_at"] as? Double,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return AlarmItem(
+                id: id,
+                label: label,
+                fireAt: Date(timeIntervalSince1970: fire),
+                fired: (row["fired"] as? Int ?? 0) == 1,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func alarm(_ a: AlarmItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return a.label.lowercased().contains(q) || a.timeText.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addAlarm(label: String, fireAt: Date) -> Int? {
+        guard fireAt > Date() else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO alarms (label, fire_at, fired, created_at, updated_at) VALUES (?, ?, 0, ?, ?)",
+            [label, fireAt.timeIntervalSince1970, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        scheduleAlarmNotification(id: id, label: label, fireAt: fireAt)
+        return id
+    }
+
+    func updateAlarm(id: Int, label: String, fireAt: Date) {
+        guard fireAt > Date() else { return }
+        _ = db.execute(
+            "UPDATE alarms SET label = ?, fire_at = ?, fired = 0, updated_at = ? WHERE id = ?",
+            [label, fireAt.timeIntervalSince1970, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+        if let alarm = alarms.first(where: { $0.id == id }) {
+            removeAlarmNotification(id: id)
+            scheduleAlarmNotification(id: id, label: alarm.label, fireAt: alarm.fireAt)
+        }
+    }
+
+    func deleteAlarm(_ id: Int) {
+        removeAlarmNotification(id: id)
+        _ = db.execute("DELETE FROM alarms WHERE id = ?", [id])
+        refresh()
+    }
+
+    func snoozeAlarm(id: Int, minutes: Int = 5) {
+        let newFire = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        updateAlarm(id: id, label: alarms.first { $0.id == id }?.label ?? "Alarm", fireAt: newFire)
+    }
+
+    private func scheduleAlarmNotification(id: Int, label: String, fireAt: Date) {
+        requestNotificationPermission()
+        let content = UNMutableNotificationContent()
+        content.title = label.isEmpty ? "Alarm" : label
+        content.body = "⏰ \(alarmDescription(fireAt))"
+        content.sound = .default
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireAt)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(identifier: "alarm-\(id)", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func removeAlarmNotification(id: Int) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["alarm-\(id)"])
+    }
+
+    func syncAlarmNotifications() {
+        for alarm in activeAlarms {
+            removeAlarmNotification(id: alarm.id)
+            scheduleAlarmNotification(id: alarm.id, label: alarm.label, fireAt: alarm.fireAt)
+        }
     }
 
     private func loadChallengeComments() -> [ChallengeComment] {

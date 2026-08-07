@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.19.0]
+
+### Added
+- **Alarms tab**: set reminders in plain English — `15 minutes`, `1 hour`, `2pm`, `8.30pm`, `9:45 am`, `noon`, `midnight`. Live preview shows what was understood. Quick presets for 15/30/50 min and 1 hour. Alarms fire as local notifications in the background — even on another tab or with the app closed. View active alarms with live countdowns, edit time/label, snooze by 5 minutes, or stop & delete. Fired alarms are kept for reference.
+
 ## [v1.18.0]
 
 ### Fixed
