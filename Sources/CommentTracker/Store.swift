@@ -566,10 +566,11 @@ final class Store: ObservableObject {
         let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let now = Date().timeIntervalSince1970
+        let slot = (cards.map(\.slot).max() ?? 0) + 1
         let wordsText = words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "|")
         _ = db.execute(
-            "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            [trimmed, group.trimmingCharacters(in: .whitespacesAndNewlines), wordsText, link, now, now]
+            "INSERT INTO wordcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [slot, trimmed, group.trimmingCharacters(in: .whitespacesAndNewlines), wordsText, link, now, now]
         )
         refresh()
     }
@@ -590,14 +591,14 @@ final class Store: ObservableObject {
     }
 
     func addAllEmptyCards(target: Int = 313) -> Int {
-        let existing = cards.count
-        let toAdd = max(0, target - existing)
+        let nextSlot = (cards.map(\.slot).max() ?? 0) + 1
+        let toAdd = max(0, target - (nextSlot - 1))
         if toAdd == 0 { return 0 }
         let now = Date().timeIntervalSince1970
-        for _ in 0..<toAdd {
+        for i in 0..<toAdd {
             _ = db.execute(
-                "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                ["", "Empty", "", "", now, now]
+                "INSERT INTO wordcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [nextSlot + i, "", "Empty", "", "", now, now]
             )
         }
         refresh()
@@ -607,13 +608,17 @@ final class Store: ObservableObject {
     func resetDeck(target: Int = 313) {
         _ = db.execute("DELETE FROM wordcards")
         let now = Date().timeIntervalSince1970
-        for _ in 0..<max(0, target) {
+        for i in 0..<max(0, target) {
             _ = db.execute(
-                "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                ["", "Empty", "", "", now, now]
+                "INSERT INTO wordcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [i + 1, "", "Empty", "", "", now, now]
             )
         }
         refresh()
+    }
+
+    var totalEmptySlots: Int {
+        cards.filter { $0.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
     }
 
     var cardGroups: [String] {
@@ -627,12 +632,13 @@ final class Store: ObservableObject {
 
     func exportCards() -> String? {
         struct CardDTO: Codable {
+            let slot: Int
             let word: String
             var group: String
             var words: [String]
             var link: String
         }
-        let dtos = cards.map { CardDTO(word: $0.word, group: $0.groupName, words: $0.words, link: $0.link) }
+        let dtos = cards.sorted(by: { $0.slot < $1.slot }).map { CardDTO(slot: $0.slot, word: $0.word, group: $0.groupName, words: $0.words, link: $0.link) }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         guard let data = try? encoder.encode(dtos) else { return nil }
@@ -643,6 +649,7 @@ final class Store: ObservableObject {
         guard let data = text.data(using: .utf8) else { return 0 }
         struct CardDTO: Decodable {
             let word: String
+            var slot: Int?
             var group: String?
             var words: [String]?
             var link: String?
@@ -650,12 +657,15 @@ final class Store: ObservableObject {
         guard let dtos = try? JSONDecoder().decode([CardDTO].self, from: data) else { return 0 }
         var added = 0
         let now = Date().timeIntervalSince1970
+        var nextSlot = (cards.map(\.slot).max() ?? 0) + 1
         for d in dtos {
             let w = d.word.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !w.isEmpty else { continue }
+            let slot = d.slot ?? nextSlot
+            if slot >= nextSlot { nextSlot = slot + 1 }
             _ = db.execute(
-                "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                [w, d.group ?? "", (d.words ?? []).joined(separator: "|"), d.link ?? "", now, now]
+                "INSERT INTO wordcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [slot, w, d.group ?? "", (d.words ?? []).joined(separator: "|"), d.link ?? "", now, now]
             )
             added += 1
         }
@@ -1154,10 +1164,11 @@ final class Store: ObservableObject {
     }
 
     private func loadCards() -> [WordCard] {
-        db.query("SELECT * FROM wordcards ORDER BY created_at ASC").compactMap { row in
+        db.query("SELECT * FROM wordcards ORDER BY slot ASC, created_at ASC").compactMap { row in
             guard let id = row["id"] as? Int, let word = row["word"] as? String, let created = row["created_at"] as? Double else { return nil }
             return WordCard(
                 id: id,
+                slot: row["slot"] as? Int ?? 0,
                 word: word,
                 groupName: row["group_name"] as? String ?? "",
                 words: (row["words"] as? String ?? "").split(separator: "|").map(String.init),

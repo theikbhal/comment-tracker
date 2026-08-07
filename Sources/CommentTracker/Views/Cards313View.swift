@@ -12,6 +12,8 @@ struct Cards313View: View {
     @State private var hideEmpty = false
     @State private var message = ""
 
+    private let deckColumns = 10
+
     private var groups: [String] { ["All"] + store.cardGroups }
 
     private var cards: [WordCard] {
@@ -26,21 +28,29 @@ struct Cards313View: View {
         if !q.isEmpty {
             list = list.filter { store.card($0, matches: searchText) }
         }
-        return list.sorted {
-            let a = $0.groupName.lowercased(), b = $1.groupName.lowercased()
-            if a == b { return $0.word.localizedCaseInsensitiveCompare($1.word) == .orderedAscending }
-            return a < b
-        }
+        return list.sorted { $0.slot < $1.slot }
+    }
+
+    private var filledCount: Int {
+        store.cards.filter { !$0.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+    }
+
+    private var visibleCount: Int {
+        hideEmpty || !searchText.isEmpty || groupFilter != "All" ? cards.count : store.cards.count
     }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
+            ScrollView(.horizontal, showsIndicators: true) {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.fixed(118), spacing: 8), count: deckColumns),
+                    alignment: .leading,
+                    spacing: 8
+                ) {
                     ForEach(cards) { card in
-                        CardCell(card: card) {
+                        Card313Cell(card: card) {
                             editingCard = card
                         }
                     }
@@ -50,7 +60,9 @@ struct Cards313View: View {
         }
         .sheet(isPresented: $showingAdd) {
             EditWordCardView(
-                onSave: { store.addCard(word: $0, group: $1, words: $2, link: $3) }
+                onSave: { word, group, words, link in
+                    store.addCard(word: word, group: group, words: words, link: link)
+                }
             )
         }
         .sheet(item: $editingCard) { card in
@@ -74,29 +86,42 @@ struct Cards313View: View {
     }
 
     private var header: some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("313 Cards")
-                    .font(.title.bold())
-                Text("\(store.cards.count) cards · each one a word")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+        VStack(spacing: 10) {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("313 Cards")
+                        .font(.title.bold())
+                    Text("\(filledCount)/313 filled")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                Spacer()
+                searchField
+                groupMenu
+                Toggle(isOn: $hideEmpty) {
+                    Label("Hide empty", systemImage: "eye.slash")
+                        .font(.caption)
+                }
+                .toggleStyle(.checkbox)
+                .help("Hide empty cards")
             }
-            Spacer()
-            searchField
-            groupMenu
-            Toggle(isOn: $hideEmpty) {
-                Label("Hide empty", systemImage: "eye.slash")
-                    .font(.caption)
+            HStack(spacing: 10) {
+                if !message.isEmpty {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                deckButtons
             }
-            .toggleStyle(.checkbox)
-            .help("Hide empty cards")
-            if !message.isEmpty {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        }
+        .padding(16)
+    }
+
+    private var deckButtons: some View {
+        HStack(spacing: 8) {
             Button {
                 let added = store.addAllEmptyCards()
                 message = added > 0 ? "Added \(added) empty cards" : "Deck is already full (313)"
@@ -119,7 +144,7 @@ struct Cards313View: View {
                 Label("Export", systemImage: "square.and.arrow.up")
             }
             .buttonStyle(.bordered)
-            .help("Export all cards to a JSON file")
+            .help("Export all -tips to file")
             Button {
                 importCards()
             } label: {
@@ -134,7 +159,6 @@ struct Cards313View: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .padding(16)
     }
 
     private var searchField: some View {
@@ -204,73 +228,129 @@ struct Cards313View: View {
     }
 }
 
-// MARK: - Cell
+// MARK: - Cell (in-place editable)
 
-struct CardCell: View {
+struct Card313Cell: View {
     @EnvironmentObject var store: Store
     let card: WordCard
-    let onOpen: () -> Void
+    let onOpenFull: () -> Void
 
-    private var wordsCount: Int {
-        card.words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+    @State private var text = ""
+    @FocusState private var focused: Bool
+    @State private var showFull = false
+
+    private var isEmpty: Bool {
+        card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Empty card")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text(card.word)
-                    .font(.title3.bold())
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            HStack(spacing: 5) {
-                if !card.groupName.isEmpty {
-                    Text(card.groupName)
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.12), in: Capsule())
-                        .foregroundStyle(.blue)
-                }
-                Spacer()
-                if !card.link.isEmpty { Image(systemName: "link").font(.caption2).foregroundStyle(.tertiary) }
-                if wordsCount > 0 { Text("+\(wordsCount)").font(.caption2).foregroundStyle(.secondary) }
-            }
+        VStack(alignment: .leading, spacing: 4) {
+            topRow
+            wordField
+            bottomRow
         }
-        .padding(12)
-        .frame(minHeight: 74, alignment: .leading)
-        .background(
-            card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? Color.gray.opacity(0.04)
-                : Color(nsColor: .controlBackgroundColor),
-            in: RoundedRectangle(cornerRadius: 10)
-        )
+        .padding(8)
+        .frame(height: 74, alignment: .topLeading)
+        .background(isEmpty ? Color.gray.opacity(0.04) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.1) : Color.gray.opacity(0.15), lineWidth: 1)
+                .stroke(focused ? Color.blue.opacity(0.5) : (isEmpty ? Color.gray.opacity(0.1) : Color.gray.opacity(0.16)), lineWidth: focused ? 1.5 : 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 10))
-        .onTapGesture {
-            onOpen()
+        .onAppear {
+            text = card.word
         }
         .contextMenu {
-            Button { onOpen() } label: { Label("Edit", systemImage: "pencil") }
+            Button {
+                onOpenFull()
+            } label: {
+                Label("Edit full card (5 words + link)", systemImage: "rectangle.badge.plus")
+            }
             Button(role: .destructive) {
                 store.deleteCard(card.id)
             } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
+        .sheet(isPresented: $showFull) {
+            EditWordCardView(
+                existing: card,
+                onSave: { word, group, words, link in
+                    store.updateCard(id: card.id, word: word, group: group, words: words, link: link)
+                }
+            )
+            .environmentObject(store)
+        }
+    }
+
+    private var topRow: some View {
+        HStack(spacing: 4) {
+            Text("\(card.slot)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            Spacer()
+            if hasLink {
+                Image(systemName: "link")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+            }
+            if wordsCount > 0 {
+                Text("+\(wordsCount)")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private var wordField: some View {
+        TextField(isEmpty ? "Empty card" : "", text: $text)
+            .textFieldStyle(.plain)
+            .focused($focused)
+            .font(isEmpty ? .callout.italic() : .headline)
+            .foregroundStyle(isEmpty ? .tertiary : .primary)
+            .lineLimit(2)
+            .onSubmit(commit)
+            .onChange(of: focused) { _, new in
+                if !new { commit() }
+            }
+    }
+
+    private var bottomRow: some View {
+        HStack(spacing: 4) {
+            if !card.groupName.isEmpty {
+                Text(card.groupName)
+                    .font(.system(size: 8, weight: .semibold))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Color.blue.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.blue)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("r\(card.row) c\(card.col)")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
+        }
+    }
+
+    private var wordsCount: Int {
+        card.words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+    }
+
+    private var hasLink: Bool {
+        !card.link.isEmpty
+    }
+
+    private func commit() {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed != card.word {
+            store.updateCard(id: card.id, word: trimmed)
+        }
     }
 }
-
-// MARK: - Add / Edit
+// MARK: - Full card dialog (5 words + link)
 
 struct EditWordCardView: View {
     @Environment(\.dismiss) private var dismiss
@@ -286,6 +366,11 @@ struct EditWordCardView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(existing == nil ? "Add Card" : "Edit Card")
                 .font(.title2.bold())
+            if let existing {
+                Text("Slot \(existing.slot)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Word")
                     .font(.caption)
@@ -326,7 +411,7 @@ struct EditWordCardView: View {
                     Label("Save", systemImage: "checkmark")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && existing == nil)
                 .keyboardShortcut(.defaultAction)
             }
         }

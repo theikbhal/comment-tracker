@@ -383,6 +383,7 @@ struct LinkItem: Identifiable, Equatable {
 
 struct WordCard: Identifiable, Equatable {
     let id: Int
+    var slot: Int
     var word: String
     var groupName: String
     var words: [String]
@@ -393,6 +394,10 @@ struct WordCard: Identifiable, Equatable {
     var wordsText: String {
         words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " | ")
     }
+
+    var deckColumns: Int { 10 }
+    var row: Int { max(1, (slot - 1) / deckColumns + 1) }
+    var col: Int { max(1, (slot - 1) % deckColumns + 1) }
 }
 
 // MARK: - Pomodoro

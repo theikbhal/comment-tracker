@@ -109,6 +109,7 @@ final class DatabaseManager {
         );
         CREATE TABLE IF NOT EXISTS wordcards (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slot INTEGER NOT NULL DEFAULT 0,
             word TEXT NOT NULL,
             group_name TEXT NOT NULL DEFAULT '',
             words TEXT NOT NULL DEFAULT '',
@@ -176,6 +177,15 @@ final class DatabaseManager {
         for statement in schema.split(separator: ";").map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) })
         where !statement.isEmpty {
             _ = execute(statement)
+        }
+        ensureColumn(table: "wordcards", column: "slot", definition: "INTEGER NOT NULL DEFAULT 0")
+        _ = execute("UPDATE wordcards SET slot = id WHERE slot = 0")
+    }
+
+    private func ensureColumn(table: String, column: String, definition: String) {
+        let columns = query("PRAGMA table_info(\(table))").compactMap { $0["name"] as? String }
+        if !columns.contains(column) {
+            _ = execute("ALTER TABLE \(table) ADD COLUMN \(column) \(definition)")
         }
     }
 

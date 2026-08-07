@@ -233,7 +233,7 @@ private var cardsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("313 Cards — one word per card", systemImage: "square.grid.3x3")
                 .font(.headline)
-            Text("A deck of one-word cards. Tap a card to add a dialog with up to 5 related words and an optional link. Group cards under a name you can search by, and export/import the whole deck as JSON.")
+            Text("A deck of one-word cards. Every card has a fixed slot number (1–313) and a grid reference (r,c) in its corner. Type a word directly on the card to edit it in place; right-click for the full dialog with 5 related words and a link. Group cards under a name you can search by, and export/import the whole deck as JSON.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text("“Add 313 empty” tops the deck up to 313 blank cards to fill in. “Reset” wipes the deck and gives you a fresh set of 313 empty cards. “Hide empty” keeps the grid clean.")

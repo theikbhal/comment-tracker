@@ -2,6 +2,19 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.4.2]
+
+### Changed
+- 313 Cards: every card now has a fixed slot number (1–313) with a grid reference (r,c) in the corner.
+- 313 Cards: words are edited in place directly on the card (Enter or click away to save); right-click opens the full dialog for 5 words + link.
+- Existing cards were auto-numbered in place (no data loss); export/import now preserves slot positions.
+
+## [v1.4.1]
+
+### Added
+- 313 Cards: "Add 313 empty", "Reset deck" (with confirmation), "Hide empty" toggle.
+- Close button on the sprint dialog.
+
 ## [v1.4.0]
 
 ### Added
