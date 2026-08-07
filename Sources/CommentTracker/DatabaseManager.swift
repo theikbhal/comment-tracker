@@ -325,6 +325,35 @@ final class DatabaseManager {
             body TEXT NOT NULL,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS pending_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            done INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS table_trackers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS table_tracker_rows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tracker_id INTEGER NOT NULL,
+            label TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS table_tracker_cells (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tracker_id INTEGER NOT NULL,
+            row_id INTEGER NOT NULL,
+            day TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

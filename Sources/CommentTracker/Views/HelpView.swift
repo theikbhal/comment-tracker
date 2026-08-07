@@ -44,6 +44,8 @@ struct HelpView: View {
                 toolsCard
                 dreamsCard
                 featuresCard
+                tableTrackerCard
+                pendingCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -374,6 +376,28 @@ struct HelpView: View {
             Label("Feature Requests — for the apps you build", systemImage: "lightbulb.fill")
                 .font(.headline)
             Text("Collect what you want to build next. Tag each request with an app, add a markdown note and a link, and move it through Ideas → Planned → In Progress → Done. Every request has a comments feed for thoughts.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var tableTrackerCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Table Tracker — spreadsheet-style habits", systemImage: "tablecells")
+                .font(.headline)
+            Text("A grid tracker: your habits down the rows, the last 14 days across the columns. Click a cell to check the day off, use the arrows to page through time, and create multiple tables. Every row shows how many days it hit.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var pendingCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Pending — the list that keeps your mind clear", systemImage: "hourglass")
+                .font(.headline)
+            Text("A simple pending list. Add items, check them done, edit the markdown note, reorder the open ones, and search. Toggle the Done filter to review what you've cleared.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

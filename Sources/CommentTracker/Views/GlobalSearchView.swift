@@ -137,6 +137,14 @@ struct GlobalSearchView: View {
         store.featureRequests.filter { store.featureRequest($0, matches: query) }
     }
 
+    private var tableResults: [TableTracker] {
+        store.tableTrackers.filter { store.tableTracker($0, matches: query) }
+    }
+
+    private var pendingResults: [PendingItem] {
+        store.pendingItems.filter { store.pendingItem($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -380,6 +388,26 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if tableResults.count > 0 {
+                        section("Table Tracker", icon: "tablecells") {
+                            ForEach(tableResults) { t in
+                                row(icon: "tablecells", color: .indigo, title: t.name, subtitle: "\(store.tableRows(for: t.id).count) rows") {
+                                    dismiss()
+                                    onNavigate(.table)
+                                }
+                            }
+                        }
+                    }
+                    if pendingResults.count > 0 {
+                        section("Pending", icon: "hourglass") {
+                            ForEach(pendingResults) { p in
+                                row(icon: "hourglass", color: .teal, title: p.title, subtitle: p.done ? "Done" : "Pending") {
+                                    dismiss()
+                                    onNavigate(.pending)
+                                }
+                            }
+                        }
+                    }
                     if trackerResults.count > 0 {
                         section("Trackers", icon: "checklist") {
                             ForEach(trackerResults) { t in
@@ -480,7 +508,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && pendingResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -578,6 +606,10 @@ struct GlobalSearchView: View {
             Text("\(dreamResults.count) dreams")
             Text("·")
             Text("\(featureResults.count) requests")
+            Text("·")
+            Text("\(tableResults.count) tables")
+            Text("·")
+            Text("\(pendingResults.count) pending")
             Text("·")
             Text("\(cardResults.count) cards")
             Text("·")

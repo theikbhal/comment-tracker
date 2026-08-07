@@ -56,6 +56,10 @@ final class Store: ObservableObject {
     @Published var dreams: [Dream] = []
     @Published var featureRequests: [FeatureRequest] = []
     @Published var featureRequestComments: [FeatureRequestComment] = []
+    @Published var tableTrackers: [TableTracker] = []
+    @Published var tableRows: [TableRow] = []
+    @Published var tableCells: [TableCell] = []
+    @Published var pendingItems: [PendingItem] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -160,6 +164,10 @@ final class Store: ObservableObject {
         dreams = loadDreams()
         featureRequests = loadFeatureRequests()
         featureRequestComments = loadFeatureRequestComments()
+        tableTrackers = loadTableTrackers()
+        tableRows = loadTableRows()
+        tableCells = loadTableCells()
+        pendingItems = loadPendingItems()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -3255,6 +3263,219 @@ final class Store: ObservableObject {
 
     func deleteFeatureRequestComment(_ id: Int) {
         _ = db.execute("DELETE FROM feature_request_comments WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Table tracker
+
+    private func loadTableTrackers() -> [TableTracker] {
+        db.query("SELECT * FROM table_trackers ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return TableTracker(id: id, name: name, createdAt: Date(timeIntervalSince1970: created), updatedAt: Date(timeIntervalSince1970: updated))
+        }
+    }
+
+    private func loadTableRows() -> [TableRow] {
+        db.query("SELECT * FROM table_tracker_rows ORDER BY position ASC, id ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let tableID = row["tracker_id"] as? Int,
+                let label = row["label"] as? String,
+                let position = row["position"] as? Int
+            else { return nil }
+            return TableRow(id: id, tableId: tableID, label: label, position: position)
+        }
+    }
+
+    private func loadTableCells() -> [TableCell] {
+        db.query("SELECT * FROM table_tracker_cells").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let tableID = row["tracker_id"] as? Int,
+                let rowID = row["row_id"] as? Int,
+                let day = row["day"] as? String
+            else { return nil }
+            return TableCell(id: id, tableId: tableID, rowId: rowID, day: day, done: (row["done"] as? Int) == 1)
+        }
+    }
+
+    func tableRows(for tableID: Int) -> [TableRow] {
+        tableRows.filter { $0.tableId == tableID }.sorted { $0.position < $1.position }
+    }
+
+    func tableTracker(_ t: TableTracker, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        let matchingRows = tableRows.filter { $0.tableId == t.id && $0.label.lowercased().contains(q) }
+        return t.name.lowercased().contains(q) || !matchingRows.isEmpty
+    }
+
+    @discardableResult
+    func addTableTracker(name: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO table_trackers (name, created_at, updated_at) VALUES (?, ?, ?)",
+            [trimmed, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func renameTableTracker(id: Int, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE table_trackers SET name = ?, updated_at = ? WHERE id = ?", [trimmed, Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func deleteTableTracker(_ id: Int) {
+        _ = db.execute("DELETE FROM table_trackers WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM table_tracker_rows WHERE tracker_id = ?", [id])
+        _ = db.execute("DELETE FROM table_tracker_cells WHERE tracker_id = ?", [id])
+        refresh()
+    }
+
+    @discardableResult
+    func addTableRow(tableID: Int, label: String) -> Int? {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (tableRows.filter { $0.tableId == tableID }.map(\.position).max() ?? -1) + 1
+        _ = db.execute(
+            "INSERT INTO table_tracker_rows (tracker_id, label, position, created_at) VALUES (?, ?, ?, ?)",
+            [tableID, trimmed, maxPos, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func renameTableRow(id: Int, label: String) {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE table_tracker_rows SET label = ? WHERE id = ?", [trimmed, id])
+        refresh()
+    }
+
+    func deleteTableRow(id: Int) {
+        _ = db.execute("DELETE FROM table_tracker_rows WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM table_tracker_cells WHERE row_id = ?", [id])
+        refresh()
+    }
+
+    func moveTableRow(id: Int, direction: Int) {
+        let list = tableRows.filter { $0.id == id }.map { $0.tableId }.first.flatMap { tid in tableRows(for: tid) }
+        guard let rows = list, let index = rows.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < rows.count else { return }
+        let other = rows[target]
+        _ = db.execute("UPDATE table_tracker_rows SET position = ? WHERE id = ?", [other.position, id])
+        _ = db.execute("UPDATE table_tracker_rows SET position = ? WHERE id = ?", [rows[index].position, other.id])
+        refresh()
+    }
+
+    func isCellDone(tableID: Int, rowID: Int, day: String) -> Bool {
+        tableCells.contains { $0.tableId == tableID && $0.rowId == rowID && $0.day == day && $0.done }
+    }
+
+    func toggleCell(tableID: Int, rowID: Int, day: String) {
+        if let cell = tableCells.first(where: { $0.tableId == tableID && $0.rowId == rowID && $0.day == day }) {
+            _ = db.execute("UPDATE table_tracker_cells SET done = ? WHERE id = ?", [cell.done ? 0 : 1, cell.id])
+        } else {
+            _ = db.execute(
+                "INSERT INTO table_tracker_cells (tracker_id, row_id, day, done) VALUES (?, ?, ?, 1)",
+                [tableID, rowID, day]
+            )
+        }
+        refresh()
+    }
+
+    func tableDoneCount(tableID: Int, rowID: Int, in days: [String]) -> Int {
+        let keys = Set(days)
+        return tableCells.filter { $0.tableId == tableID && $0.rowId == rowID && keys.contains($0.day) && $0.done }.count
+    }
+
+    // MARK: - Pending list
+
+    private func loadPendingItems() -> [PendingItem] {
+        db.query("SELECT * FROM pending_items ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let note = row["note"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return PendingItem(
+                id: id,
+                title: title,
+                note: note,
+                done: (row["done"] as? Int) == 1,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func pendingItem(_ p: PendingItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return p.title.lowercased().contains(q) || p.note.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addPendingItem(title: String, note: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (pendingItems.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO pending_items (title, note, done, position, created_at, updated_at) VALUES (?, ?, 0, ?, ?, ?)",
+            [trimmed, note, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updatePendingItem(id: Int, title: String, note: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE pending_items SET title = ?, note = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func togglePendingItemDone(_ id: Int) {
+        guard let item = pendingItems.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE pending_items SET done = ?, updated_at = ? WHERE id = ?", [item.done ? 0 : 1, Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func movePendingItem(id: Int, direction: Int) {
+        let list = pendingItems.filter { !$0.done }.sorted { $0.position < $1.position }
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE pending_items SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE pending_items SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deletePendingItem(_ id: Int) {
+        _ = db.execute("DELETE FROM pending_items WHERE id = ?", [id])
         refresh()
     }
 

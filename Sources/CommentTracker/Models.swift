@@ -898,6 +898,42 @@ struct FeatureRequestComment: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Table tracker (spreadsheet-style habits)
+
+struct TableTracker: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct TableRow: Identifiable, Equatable {
+    let id: Int
+    var tableId: Int
+    var label: String
+    var position: Int
+}
+
+struct TableCell: Identifiable, Equatable {
+    let id: Int
+    var tableId: Int
+    var rowId: Int
+    var day: String
+    var done: Bool
+}
+
+// MARK: - Pending list
+
+struct PendingItem: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var note: String
+    var done: Bool
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Tools
 
 struct Tool: Identifiable, Equatable {

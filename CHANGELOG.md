@@ -2,6 +2,12 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.22.0]
+
+### Added
+- **Table Tracker tab**: spreadsheet-style habit tracking. Create multiple tables; your habits run down the rows, the last 14 days run across the columns. Click any cell to check the day off, arrow through time, jump to today, and rename/delete rows from the row menu. Each row shows its hit count for the window.
+- **Pending tab**: a simple pending list. Add items, check them done, edit markdown notes, reorder the open ones, search, and toggle the Done filter.
+
 ## [v1.21.0]
 
 ### Added

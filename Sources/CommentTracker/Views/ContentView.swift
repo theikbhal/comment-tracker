@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, pending, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -26,6 +26,8 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .tools: return "Tools"
         case .dreams: return "Old Dreams"
         case .features: return "Feature Requests"
+        case .table: return "Table Tracker"
+        case .pending: return "Pending"
         case .tracker: return "Tracker"
         case .people: return "People"
         case .thoughts: return "Thoughts"
@@ -65,6 +67,8 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .tools: return "wrench.and.screwdriver.fill"
         case .dreams: return "moon.stars.fill"
         case .features: return "lightbulb.fill"
+        case .table: return "tablecells"
+        case .pending: return "hourglass"
         case .tracker: return "checklist"
         case .people: return "person.2"
         case .thoughts: return "lightbulb"
@@ -162,6 +166,8 @@ struct ContentView: View {
         case .tools: ToolsView()
         case .dreams: DreamsView()
         case .features: FeatureRequestsView()
+        case .table: TableTrackerView()
+        case .pending: PendingListView()
         case .tracker: TrackerView()
         case .people: PeopleView()
         case .thoughts: ThoughtsView()
