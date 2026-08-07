@@ -202,6 +202,19 @@ final class DatabaseManager {
             updated_at REAL NOT NULL,
             published_at REAL
         );
+        CREATE TABLE IF NOT EXISTS slack_channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            color TEXT NOT NULL DEFAULT 'blue',
+            created_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS slack_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id INTEGER NOT NULL,
+            author TEXT NOT NULL,
+            text TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

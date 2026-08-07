@@ -34,6 +34,7 @@ struct HelpView: View {
                 scheduleCard
                 mindMapCard
                 blogCard
+                slackCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -254,6 +255,17 @@ struct HelpView: View {
             Label("Blog — write and publish posts", systemImage: "newspaper.fill")
                 .font(.headline)
             Text("Keep your writing here: title, body, and comma-separated tags. Draft or publish with one click (publishing stamps the date), filter by status, search by title/body/tags.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var slackCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Slack — mini channels", systemImage: "bubble.left.and.bubble.right.fill")
+                .font(.headline)
+            Text("A tiny in-app Slack. Channels have names and colors; post messages with Return, rename or delete a channel from right-click, and delete any message from right-click. A #general channel is created for you.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

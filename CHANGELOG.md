@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.12.0]
+
+### Added
+- New **Slack** tab: a mini in-app Slack. Channels with names and colors (a #general channel is created for you), messages posted with Return, auto-scroll, rename/delete channels and delete messages from right-click.
+
 ## [v1.11.0]
 
 ### Added

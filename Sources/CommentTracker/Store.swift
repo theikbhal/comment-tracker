@@ -41,6 +41,8 @@ final class Store: ObservableObject {
     @Published var mindMaps: [MindMap] = []
     @Published var mindMapNodes: [MindMapNode] = []
     @Published var blogPosts: [BlogPost] = []
+    @Published var slackChannels: [SlackChannel] = []
+    @Published var slackMessages: [SlackMessage] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -78,6 +80,7 @@ final class Store: ObservableObject {
         }
         isOnboarded = settings["onboarded"] == "true"
         seedPresetsIfNeeded()
+        seedSlackIfNeeded()
         refresh()
     }
 
@@ -105,6 +108,8 @@ final class Store: ObservableObject {
         mindMaps = loadMindMaps()
         mindMapNodes = loadMindMapNodes()
         blogPosts = loadBlogPosts()
+        slackChannels = loadSlackChannels()
+        slackMessages = loadSlackMessages()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -1081,6 +1086,78 @@ final class Store: ObservableObject {
     func deleteBlogPost(_ id: Int) {
         _ = db.execute("DELETE FROM blog_posts WHERE id = ?", [id])
         refresh()
+    }
+
+    // MARK: - Mini Slack
+
+    private func seedSlackIfNeeded() {
+        let settings = db.allSettings
+        guard settings["slackSeeded"] != "true" else { return }
+        insertSlackChannel(name: "general", color: "blue")
+        db.setSetting("slackSeeded", "true")
+        refresh()
+    }
+
+    func slackChannel(_ c: SlackChannel, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return c.name.lowercased().contains(query.lowercased())
+    }
+
+    func slackMessage(_ m: SlackMessage, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return m.text.lowercased().contains(q) || m.author.lowercased().contains(q)
+    }
+
+    func messages(in channelID: Int) -> [SlackMessage] {
+        slackMessages.filter { $0.channelId == channelID }
+    }
+
+    func addSlackChannel(name: String, color: String = "blue") -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        _ = db.execute(
+            "INSERT INTO slack_channels (name, color, created_at) VALUES (?, ?, ?)",
+            [trimmed, color, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func renameSlackChannel(id: Int, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE slack_channels SET name = ? WHERE id = ?", [trimmed, id])
+        refresh()
+    }
+
+    func deleteSlackChannel(_ id: Int) {
+        _ = db.execute("DELETE FROM slack_messages WHERE channel_id = ?", [id])
+        _ = db.execute("DELETE FROM slack_channels WHERE id = ?", [id])
+        refresh()
+    }
+
+    func sendSlackMessage(channelID: Int, author: String = "Me", text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO slack_messages (channel_id, author, text, created_at) VALUES (?, ?, ?, ?)",
+            [channelID, author, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteSlackMessage(_ id: Int) {
+        _ = db.execute("DELETE FROM slack_messages WHERE id = ?", [id])
+        refresh()
+    }
+
+    private func insertSlackChannel(name: String, color: String) {
+        _ = db.execute(
+            "INSERT INTO slack_channels (name, color, created_at) VALUES (?, ?, ?)",
+            [name, color, Date().timeIntervalSince1970]
+        )
     }
 
     // MARK: - Backup & Restore
@@ -2066,6 +2143,41 @@ final class Store: ObservableObject {
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated),
                 publishedAt: (row["published_at"] as? Double).map { Date(timeIntervalSince1970: $0) }
+            )
+        }
+    }
+
+    private func loadSlackChannels() -> [SlackChannel] {
+        db.query("SELECT * FROM slack_channels ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return SlackChannel(
+                id: id,
+                name: name,
+                color: row["color"] as? String ?? "blue",
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadSlackMessages() -> [SlackMessage] {
+        db.query("SELECT * FROM slack_messages ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let channelID = row["channel_id"] as? Int,
+                let author = row["author"] as? String,
+                let text = row["text"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return SlackMessage(
+                id: id,
+                channelId: channelID,
+                author: author,
+                text: text,
+                createdAt: Date(timeIntervalSince1970: created)
             )
         }
     }

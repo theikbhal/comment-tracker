@@ -654,6 +654,25 @@ struct BlogPost: Identifiable, Equatable {
     }
 }
 
+// MARK: - Mini Slack
+
+struct SlackChannel: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var color: String
+    var createdAt: Date
+
+    var displayName: String { "#\(name)" }
+}
+
+struct SlackMessage: Identifiable, Equatable {
+    let id: Int
+    var channelId: Int
+    var author: String
+    var text: String
+    var createdAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {
