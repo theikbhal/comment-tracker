@@ -45,6 +45,7 @@ final class Store: ObservableObject {
     @Published var slackChannels: [SlackChannel] = []
     @Published var slackMessages: [SlackMessage] = []
     @Published var calendarEvents: [CalendarEvent] = []
+    @Published var yearCards: [YearCard] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -83,6 +84,7 @@ final class Store: ObservableObject {
         isOnboarded = settings["onboarded"] == "true"
         seedPresetsIfNeeded()
         seedSlackIfNeeded()
+        seedYearCardsIfNeeded()
         refresh()
         syncCalendarReminders()
     }
@@ -114,6 +116,7 @@ final class Store: ObservableObject {
         slackChannels = loadSlackChannels()
         slackMessages = loadSlackMessages()
         calendarEvents = loadCalendarEvents()
+        yearCards = loadYearCards()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -2345,6 +2348,65 @@ final class Store: ObservableObject {
                 updatedAt: Date(timeIntervalSince1970: updated)
             )
         }
+    }
+
+    private func seedYearCardsIfNeeded() {
+        let count = (db.query("SELECT COUNT(*) AS c FROM year_cards").first?["c"] as? Int) ?? 0
+        guard count == 0 else { return }
+        for slot in 1...12 {
+            _ = db.execute(
+                "INSERT INTO year_cards (slot, word, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                [slot, "", Date().timeIntervalSince1970, Date().timeIntervalSince1970]
+            )
+        }
+        refresh()
+    }
+
+    private func loadYearCards() -> [YearCard] {
+        db.query("SELECT * FROM year_cards ORDER BY slot ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let slot = row["slot"] as? Int,
+                let word = row["word"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return YearCard(
+                id: id,
+                slot: slot,
+                word: word,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func yearCard(_ c: YearCard, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return c.word.lowercased().contains(q) || c.monthName.lowercased().contains(q)
+    }
+
+    func updateYearCard(id: Int, word: String) {
+        _ = db.execute(
+            "UPDATE year_cards SET word = ?, updated_at = ? WHERE id = ?",
+            [word, Date().timeIntervalSince1970, id]
+        )
+        if let index = yearCards.firstIndex(where: { $0.id == id }) {
+            yearCards[index].word = word
+            yearCards[index].updatedAt = Date()
+        }
+    }
+
+    func resetYearCards() {
+        _ = db.execute("DELETE FROM year_cards")
+        for slot in 1...12 {
+            _ = db.execute(
+                "INSERT INTO year_cards (slot, word, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                [slot, "", Date().timeIntervalSince1970, Date().timeIntervalSince1970]
+            )
+        }
+        refresh()
     }
 
     private func loadThoughts() -> [Thought] {

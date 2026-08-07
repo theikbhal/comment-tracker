@@ -702,6 +702,23 @@ func calendarReminderLabel(_ minutes: Int) -> String {
     }
 }
 
+// MARK: - Year cards (12 cards, one per month)
+
+let yearMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+struct YearCard: Identifiable, Equatable {
+    let id: Int
+    var slot: Int
+    var word: String
+    var createdAt: Date
+    var updatedAt: Date
+
+    var monthName: String {
+        let index = max(0, min(11, slot - 1))
+        return yearMonthNames[index]
+    }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

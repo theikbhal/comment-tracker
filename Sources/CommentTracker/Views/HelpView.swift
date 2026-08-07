@@ -36,6 +36,7 @@ struct HelpView: View {
                 blogCard
                 slackCard
                 calendarCard
+                yearCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -278,6 +279,17 @@ struct HelpView: View {
             Label("Calendar — events by day", systemImage: "calendar")
                 .font(.headline)
             Text("A month grid of events with times and colors. Click a day to see its events in the side panel; click the + to add, click an event to edit. Navigate months, jump to Today, search events via ⌘K. Set a reminder (5 min to 1 day before) and a local notification fires at the right time — even when the app isn't open.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var yearCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Year — 12 cards, one per month", systemImage: "calendar.circle")
+                .font(.headline)
+            Text("One card for each month of the year. Click a card and type a single word or phrase to set its focus for that month. A count at the top shows how many of the 12 are filled. Reset clears all 12 back to empty.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.14.0]
+
+### Added
+- **Year** tab: 12 cards, one per month. Click a card and type the word/phrase you want to focus on for that month; a count shows how many of the 12 are filled. Searchable via ⌘K, resettable in one click.
+
 ## [v1.13.1]
 
 ### Added
