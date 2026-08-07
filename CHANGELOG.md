@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.16.0]
+
+### Added
+- **Challenges** tab: personal quests across Active / Completed / Archived columns. Each challenge has optional start/end dates and a markdown note with clickable links. Move between columns via the arrows menu. Search via ⌘K.
+
 ## [v1.15.0]
 
 ### Added

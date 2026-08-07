@@ -763,6 +763,74 @@ struct WeekCard: Identifiable, Equatable {
     }
 }
 
+// MARK: - Audio notes (voice recordings)
+
+struct AudioNote: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var filename: String
+    var duration: Double
+    var createdAt: Date
+    var updatedAt: Date
+
+    var durationText: String {
+        let total = Int(duration.rounded())
+        let m = total / 60
+        let s = total % 60
+        return m > 0 ? "\(m)m \(s)s" : "\(s)s"
+    }
+}
+
+// MARK: - Challenges
+
+enum ChallengeStatus: String, CaseIterable, Identifiable {
+    case active, completed, archived
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .active: return "Active"
+        case .completed: return "Completed"
+        case .archived: return "Archived"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .active: return .orange
+        case .completed: return .green
+        case .archived: return .gray
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .active: return "bolt.fill"
+        case .completed: return "checkmark.seal.fill"
+        case .archived: return "archivebox.fill"
+        }
+    }
+}
+
+struct Challenge: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var body: String
+    var status: ChallengeStatus
+    var startDate: String
+    var endDate: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var dateRangeText: String {
+        if startDate.isEmpty && endDate.isEmpty { return "" }
+        if startDate.isEmpty { return "by \(endDate)" }
+        if endDate.isEmpty { return "from \(startDate)" }
+        return "\(startDate) → \(endDate)"
+    }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

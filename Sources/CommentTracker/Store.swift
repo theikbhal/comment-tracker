@@ -47,6 +47,8 @@ final class Store: ObservableObject {
     @Published var calendarEvents: [CalendarEvent] = []
     @Published var yearCards: [YearCard] = []
     @Published var weekCards: [WeekCard] = []
+    @Published var audioNotes: [AudioNote] = []
+    @Published var challenges: [Challenge] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -120,6 +122,8 @@ final class Store: ObservableObject {
         calendarEvents = loadCalendarEvents()
         yearCards = loadYearCards()
         weekCards = loadWeekCards()
+        audioNotes = loadAudioNotes()
+        challenges = loadChallenges()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -2515,6 +2519,149 @@ final class Store: ObservableObject {
                 [slot, Date().timeIntervalSince1970, Date().timeIntervalSince1970]
             )
         }
+        refresh()
+    }
+
+    // MARK: - Audio notes
+
+    var audioDirectoryURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("CommentTracker/AudioNotes", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private func loadAudioNotes() -> [AudioNote] {
+        db.query("SELECT * FROM audio_notes ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let filename = row["filename"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return AudioNote(
+                id: id,
+                title: title,
+                filename: filename,
+                duration: row["duration"] as? Double ?? 0,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func audioNote(_ n: AudioNote, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return n.title.lowercased().contains(query.lowercased())
+    }
+
+    func addAudioNote(title: String, filename: String, duration: Double) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO audio_notes (title, filename, duration, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            [trimmed.isEmpty ? "Untitled note" : trimmed, filename, duration, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func renameAudioNote(id: Int, title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE audio_notes SET title = ?, updated_at = ? WHERE id = ?",
+            [trimmed, Date().timeIntervalSince1970, id]
+        )
+        if let index = audioNotes.firstIndex(where: { $0.id == id }) {
+            audioNotes[index].title = trimmed
+            audioNotes[index].updatedAt = Date()
+        }
+    }
+
+    func deleteAudioNote(_ id: Int) {
+        guard let note = audioNotes.first(where: { $0.id == id }) else { return }
+        let file = audioDirectoryURL.appendingPathComponent(note.filename)
+        try? FileManager.default.removeItem(at: file)
+        _ = db.execute("DELETE FROM audio_notes WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Challenges
+
+    private func loadChallenges() -> [Challenge] {
+        db.query("SELECT * FROM challenges ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let body = row["body"] as? String,
+                let statusRaw = row["status"] as? String,
+                let status = ChallengeStatus(rawValue: statusRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Challenge(
+                id: id,
+                title: title,
+                body: body,
+                status: status,
+                startDate: row["start_date"] as? String ?? "",
+                endDate: row["end_date"] as? String ?? "",
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func challenge(_ c: Challenge, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return c.title.lowercased().contains(q) || c.body.lowercased().contains(q) || c.dateRangeText.lowercased().contains(q)
+    }
+
+    func challenges(for status: ChallengeStatus) -> [Challenge] {
+        challenges.filter { $0.status == status }
+    }
+
+    @discardableResult
+    func addChallenge(title: String, body: String, status: ChallengeStatus, startDate: String, endDate: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (challenges.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO challenges (title, body, status, start_date, end_date, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, body, status.rawValue, startDate, endDate, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateChallenge(id: Int, title: String, body: String, startDate: String, endDate: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE challenges SET title = ?, body = ?, start_date = ?, end_date = ?, updated_at = ? WHERE id = ?",
+            [trimmed, body, startDate, endDate, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func setChallengeStatus(id: Int, status: ChallengeStatus) {
+        _ = db.execute(
+            "UPDATE challenges SET status = ?, position = ?, updated_at = ? WHERE id = ?",
+            [status.rawValue, (challenges.map(\.position).max() ?? 0) + 1, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteChallenge(_ id: Int) {
+        _ = db.execute("DELETE FROM challenges WHERE id = ?", [id])
         refresh()
     }
 

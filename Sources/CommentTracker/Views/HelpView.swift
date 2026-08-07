@@ -38,6 +38,7 @@ struct HelpView: View {
                 calendarCard
                 yearCard
                 weekCard
+                challengeCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -302,6 +303,17 @@ struct HelpView: View {
             Label("52 Weeks — one card per week of the year", systemImage: "calendar.badge.plus")
                 .font(.headline)
             Text("Each card shows its week number, month, and start/end dates. Click a card to add a title and a markdown note — bold, lists and links all work, so paste a YouTube URL or any link and click it straight from the note or the card preview. Search via ⌘K, export/import all 52 weeks as JSON, or reset them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var challengeCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Challenges — personal quests", systemImage: "bolt.fill")
+                .font(.headline)
+            Text("Track any challenge (30-day streaks, no-sugar month, etc.) across Active / Completed / Archived columns. Each challenge has optional start/end dates and a markdown note with clickable links. Move a challenge between columns via the arrows menu.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

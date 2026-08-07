@@ -26,5 +26,7 @@
 	<string>AppIcon</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Comment Tracker uses the microphone to record your audio notes.</string>
 </dict>
 </plist>
