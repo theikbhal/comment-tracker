@@ -2,6 +2,12 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.16.1]
+
+### Added
+- **Challenge comments**: open a challenge to see a comment feed — add and delete comments, with a comment count on each card. Delete a challenge now removes its comments too.
+- **Start / end dates**: set them with real date pickers instead of free text.
+
 ## [v1.17.0]
 
 ### Added

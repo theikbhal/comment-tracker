@@ -831,6 +831,13 @@ struct Challenge: Identifiable, Equatable {
     }
 }
 
+struct ChallengeComment: Identifiable, Equatable {
+    let id: Int
+    var challengeId: Int
+    var body: String
+    var createdAt: Date
+}
+
 // MARK: - Roadmap
 
 enum RoadmapStatus: String, CaseIterable, Identifiable {

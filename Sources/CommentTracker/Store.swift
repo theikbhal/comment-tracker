@@ -49,6 +49,7 @@ final class Store: ObservableObject {
     @Published var weekCards: [WeekCard] = []
     @Published var audioNotes: [AudioNote] = []
     @Published var challenges: [Challenge] = []
+    @Published var challengeComments: [ChallengeComment] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -125,6 +126,7 @@ final class Store: ObservableObject {
         weekCards = loadWeekCards()
         audioNotes = loadAudioNotes()
         challenges = loadChallenges()
+        challengeComments = loadChallengeComments()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -2664,6 +2666,45 @@ final class Store: ObservableObject {
 
     func deleteChallenge(_ id: Int) {
         _ = db.execute("DELETE FROM challenges WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM challenge_comments WHERE challenge_id = ?", [id])
+        refresh()
+    }
+
+    private func loadChallengeComments() -> [ChallengeComment] {
+        db.query("SELECT * FROM challenge_comments ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let challengeID = row["challenge_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return ChallengeComment(
+                id: id,
+                challengeId: challengeID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func challengeComments(for challengeID: Int) -> [ChallengeComment] {
+        challengeComments
+            .filter { $0.challengeId == challengeID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addChallengeComment(challengeID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO challenge_comments (challenge_id, body, created_at) VALUES (?, ?, ?)",
+            [challengeID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteChallengeComment(_ id: Int) {
+        _ = db.execute("DELETE FROM challenge_comments WHERE id = ?", [id])
         refresh()
     }
 

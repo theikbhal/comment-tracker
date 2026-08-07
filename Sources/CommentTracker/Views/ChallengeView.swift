@@ -28,16 +28,16 @@ struct ChallengeView: View {
             }
         }
         .sheet(isPresented: $showingAdd) {
-            ChallengeEditSheet { title, body, startDate, endDate in
-                store.addChallenge(title: title, body: body, status: .active, startDate: startDate, endDate: endDate)
+            ChallengeAddSheet { title, body, start, end in
+                store.addChallenge(title: title, body: body, status: .active, startDate: start, endDate: end)
             }
             .environmentObject(store)
         }
         .sheet(item: $editing) { challenge in
-            ChallengeEditSheet(
+            ChallengeDetailSheet(
                 existing: challenge,
-                onSave: { title, body, startDate, endDate in
-                    store.updateChallenge(id: challenge.id, title: title, body: body, startDate: startDate, endDate: endDate)
+                onSave: { title, note, start, end in
+                    store.updateChallenge(id: challenge.id, title: title, body: note, startDate: start, endDate: end)
                 }
             )
             .environmentObject(store)
@@ -148,6 +148,10 @@ struct ChallengeCardView: View {
     let challenge: Challenge
     let onOpenFull: () -> Void
 
+    private var commentCount: Int {
+        store.challengeComments(for: challenge.id).count
+    }
+
     private var renderedBody: AttributedString? {
         let trimmed = challenge.body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -187,6 +191,21 @@ struct ChallengeCardView: View {
                         .font(.caption2)
                 }
                 .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 8) {
+                if commentCount > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "bubble.left")
+                            .font(.system(size: 9))
+                        Text("\(commentCount)")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(challenge.updatedAt.formatted(date: .omitted, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(10)
@@ -242,67 +261,245 @@ struct ChallengeCardView: View {
     }
 }
 
-// MARK: - Edit sheet
+// MARK: - Add sheet
 
-struct ChallengeEditSheet: View {
+struct ChallengeAddSheet: View {
     @Environment(\.dismiss) private var dismiss
-    var existing: Challenge? = nil
     let onSave: (String, String, String, String) -> Void
 
     @State private var title = ""
     @State private var note = ""
-    @State private var startDate = ""
-    @State private var endDate = ""
+    @State private var hasStart = false
+    @State private var hasEnd = false
+    @State private var startDate = Date()
+    @State private var endDate = Date()
 
-    private var renderedBody: AttributedString? {
-        try? AttributedString(markdown: note, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
-    }
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(existing == nil ? "Add Challenge" : "Edit Challenge")
+            Text("Add Challenge")
                 .font(.title2.bold())
             TextField("Title", text: $title)
                 .textFieldStyle(.roundedBorder)
-            HStack(spacing: 10) {
-                TextField("Start date (e.g. Aug 7)", text: $startDate)
-                    .textFieldStyle(.roundedBorder)
-                TextField("End date (e.g. Sep 7)", text: $endDate)
-                    .textFieldStyle(.roundedBorder)
+            HStack(spacing: 14) {
+                Toggle(isOn: $hasStart) {
+                    Label("Start", systemImage: "calendar")
+                        .font(.caption)
+                        .fixedSize()
+                }
+                .toggleStyle(.checkbox)
+                if hasStart {
+                    DatePicker("", selection: $startDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
+                Spacer()
+                Toggle(isOn: $hasEnd) {
+                    Label("End", systemImage: "calendar")
+                        .font(.caption)
+                        .fixedSize()
+                }
+                .toggleStyle(.checkbox)
+                if hasEnd {
+                    DatePicker("", selection: $endDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
             }
             Text("Note — markdown supported ([link](https://…), **bold**, lists)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             TextEditor(text: $note)
                 .font(.body.monospaced())
-                .frame(height: 150)
+                .frame(height: 120)
                 .padding(6)
                 .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.gray.opacity(0.15), lineWidth: 1)
                 )
-            if let rendered = renderedBody, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Preview")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(rendered)
-                        .font(.callout)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(8)
-                        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
-                        .environment(\.openURL, OpenURLAction { url in
-                            NSWorkspace.shared.open(url)
-                            return .handled
-                        })
-                }
-            }
             HStack {
                 Button("Cancel") { dismiss() }
                 Spacer()
                 Button {
-                    onSave(title, note, startDate, endDate)
+                    let start = hasStart ? Self.dayFormatter.string(from: startDate) : ""
+                    let end = hasEnd ? Self.dayFormatter.string(from: endDate) : ""
+                    onSave(title, note, start, end)
+                    dismiss()
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 460)
+    }
+}
+
+// MARK: - Detail sheet (dates, note, comments)
+
+struct ChallengeDetailSheet: View {
+    @EnvironmentObject var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let existing: Challenge
+    let onSave: (String, String, String, String) -> Void
+
+    @State private var title = ""
+    @State private var note = ""
+    @State private var hasStart = false
+    @State private var hasEnd = false
+    @State private var startDate = Date()
+    @State private var endDate = Date()
+    @State private var newComment = ""
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private var comments: [ChallengeComment] {
+        store.challengeComments(for: existing.id)
+    }
+
+    private var renderedNote: AttributedString? {
+        try? AttributedString(markdown: note, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(existing.title.isEmpty ? "Challenge" : "Edit Challenge")
+                    .font(.title2.bold())
+                Spacer()
+                statusMenu
+            }
+
+            TextField("Title", text: $title)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 14) {
+                Toggle(isOn: $hasStart) {
+                    Label("Start", systemImage: "calendar")
+                        .font(.caption)
+                        .fixedSize()
+                }
+                .toggleStyle(.checkbox)
+                if hasStart {
+                    DatePicker("", selection: $startDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
+                Spacer()
+                Toggle(isOn: $hasEnd) {
+                    Label("End", systemImage: "calendar")
+                        .font(.caption)
+                        .fixedSize()
+                }
+                .toggleStyle(.checkbox)
+                if hasEnd {
+                    DatePicker("", selection: $endDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
+            }
+
+            Text("Note — markdown supported ([link](https://…), **bold**, lists)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextEditor(text: $note)
+                .font(.body.monospaced())
+                .frame(height: 120)
+                .padding(6)
+                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                )
+            if let rendered = renderedNote, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(rendered)
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+                    .environment(\.openURL, OpenURLAction { url in
+                        NSWorkspace.shared.open(url)
+                        return .handled
+                    })
+            }
+
+            Divider()
+
+            HStack {
+                Text("Comments")
+                    .font(.headline)
+                Spacer()
+                Text("\(comments.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    if comments.isEmpty {
+                        Text("No comments yet")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.vertical, 8)
+                    }
+                    ForEach(comments) { comment in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(comment.body)
+                                .font(.callout)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                store.deleteChallengeComment(comment.id)
+                            } label: {
+                                Label("Delete comment", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: 160)
+
+            HStack(spacing: 8) {
+                TextField("Add a comment…", text: $newComment)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(addComment)
+                Button {
+                    addComment()
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.plain)
+                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                Spacer()
+                Button {
+                    let start = hasStart ? Self.dayFormatter.string(from: startDate) : ""
+                    let end = hasEnd ? Self.dayFormatter.string(from: endDate) : ""
+                    onSave(title, note, start, end)
                     dismiss()
                 } label: {
                     Label("Save", systemImage: "checkmark")
@@ -313,14 +510,55 @@ struct ChallengeEditSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 460)
+        .frame(width: 500)
         .onAppear {
-            if let existing {
-                title = existing.title
-                note = existing.body
-                startDate = existing.startDate
-                endDate = existing.endDate
+            title = existing.title
+            note = existing.body
+            if let d = Self.parseDay(existing.startDate) {
+                hasStart = true
+                startDate = d
+            }
+            if let d = Self.parseDay(existing.endDate) {
+                hasEnd = true
+                endDate = d
             }
         }
+    }
+
+    private var statusMenu: some View {
+        Menu {
+            ForEach(ChallengeStatus.allCases) { s in
+                Button {
+                    store.setChallengeStatus(id: existing.id, status: s)
+                } label: {
+                    if s == existing.status {
+                        Label(s.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(s.displayName)
+                    }
+                }
+            }
+        } label: {
+            Label(existing.status.displayName, systemImage: existing.status.symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(existing.status.color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(existing.status.color.opacity(0.12), in: Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
+    private static func parseDay(_ s: String) -> Date? {
+        guard !s.isEmpty else { return nil }
+        return dayFormatter.date(from: s)
+    }
+
+    private func addComment() {
+        let trimmed = newComment.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        store.addChallengeComment(challengeID: existing.id, body: trimmed)
+        newComment = ""
     }
 }
