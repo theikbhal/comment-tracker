@@ -378,6 +378,14 @@ struct Fail: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Interstitial Notes (notebook "what am I doing now")
+
+struct InterNote: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var createdAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

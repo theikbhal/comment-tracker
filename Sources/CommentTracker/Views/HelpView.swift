@@ -29,6 +29,7 @@ struct HelpView: View {
                 thoughtsCard
                 winsCard
                 failsCard
+                notesCard
                 linksCard
                 cardsCard
                 pomodoroCard
@@ -227,6 +228,19 @@ struct HelpView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text("• Just stumbled? Type it in the compose box and hit Log the fail.")
+                    .font(.caption)
+        }
+        .card()
+    }
+
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Interstitial Notes — a notebook for 'what am I doing now'", systemImage: "note.text")
+                .font(.headline)
+            Text("A notebook-paper capture log. When you pause between tasks, jot down what you're working on right now. Each line is timestamped and grouped by day, so you can see the thread of your attention.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("• Quick check-in: type above and hit Log check-in (⌘⏎).")
                     .font(.caption)
         }
         .card()

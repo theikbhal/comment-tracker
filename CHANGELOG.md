@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.5.1]
+
+### Added
+- New **Notes** tab: Interstitial Notes — a notebook-paper capture log. Between tasks, jot what you're working on right now; every line is timestamped and grouped by day (Today / Yesterday / date), styled like ruled notebook paper. Searchable, delete per line, ⌘⏎ to log.
+
 ## [v1.5.0]
 
 ### Added

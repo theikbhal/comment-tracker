@@ -29,6 +29,7 @@ final class Store: ObservableObject {
 
     @Published var wins: [Win] = []
     @Published var fails: [Fail] = []
+    @Published var interNotes: [InterNote] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -81,6 +82,7 @@ final class Store: ObservableObject {
         thoughts = loadThoughts()
         wins = loadWins()
         fails = loadFails()
+        interNotes = loadInterNotes()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -525,6 +527,28 @@ final class Store: ObservableObject {
         _ = db.execute("UPDATE fails SET bookmarked = ? WHERE id = ?", [newValue, id])
         refresh()
         return newValue == 1
+    }
+
+    // MARK: - Interstitial Notes
+
+    func interNote(_ n: InterNote, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return n.text.lowercased().contains(query.lowercased())
+    }
+
+    func addInterNote(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO interstitial_notes (text, created_at) VALUES (?, ?)",
+            [trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteInterNote(_ id: Int) {
+        _ = db.execute("DELETE FROM interstitial_notes WHERE id = ?", [id])
+        refresh()
     }
 
     // MARK: - Backup & Restore
@@ -1277,6 +1301,17 @@ final class Store: ObservableObject {
                 bookmarked: (row["bookmarked"] as? Int ?? 0) == 1,
                 createdAt: Date(timeIntervalSince1970: created)
             )
+        }
+    }
+
+    private func loadInterNotes() -> [InterNote] {
+        db.query("SELECT * FROM interstitial_notes ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return InterNote(id: id, text: text, createdAt: Date(timeIntervalSince1970: created))
         }
     }
 
