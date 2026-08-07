@@ -1092,6 +1092,18 @@ struct EventEpisode: Identifiable, Equatable {
     }
 }
 
+// MARK: - Mini Tree
+
+struct TreeNode: Identifiable, Equatable {
+    let id: Int
+    var parentId: Int?
+    var title: String
+    var note: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Family
 
 struct FamilyMember: Identifiable, Equatable {

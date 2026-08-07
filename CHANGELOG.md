@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.28.0]
+
+### Added
+- **Mini Tree tab**: a tree of ideas. Plant a root and add children to any branch — expand and collapse, reorder siblings, and add a markdown note to each branch. Deleting a branch removes everything under it.
+
 ## [v1.27.0]
 
 ### Added

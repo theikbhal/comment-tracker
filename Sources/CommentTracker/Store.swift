@@ -76,6 +76,7 @@ final class Store: ObservableObject {
     @Published var roadmap: [RoadmapItem] = []
     @Published var events: [EventShow] = []
     @Published var eventEpisodes: [EventEpisode] = []
+    @Published var treeNodes: [TreeNode] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -204,6 +205,7 @@ final class Store: ObservableObject {
         redditComments = loadRedditComments()
         events = loadEvents()
         eventEpisodes = loadEventEpisodes()
+        treeNodes = loadTreeNodes()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -4464,6 +4466,110 @@ final class Store: ObservableObject {
         nowPlayingEventID = nil
         isPlaying = false
         audioPlaybackTime = 0
+    }
+
+    // MARK: - Mini Tree
+
+    private func loadTreeNodes() -> [TreeNode] {
+        db.query("SELECT * FROM tree_nodes ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let note = row["note"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return TreeNode(
+                id: id,
+                parentId: row["parent_id"] as? Int,
+                title: title,
+                note: note,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func treeNode(_ n: TreeNode, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return n.title.lowercased().contains(q) || n.note.lowercased().contains(q)
+    }
+
+    func rootTreeNodes() -> [TreeNode] {
+        treeNodes.filter { $0.parentId == nil }
+    }
+
+    func treeChildren(of parentID: Int) -> [TreeNode] {
+        treeNodes.filter { $0.parentId == parentID }
+    }
+
+    func hasTreeChildren(_ nodeID: Int) -> Bool {
+        treeNodes.contains { $0.parentId == nodeID }
+    }
+
+    func treeDepth(of nodeID: Int) -> Int {
+        var depth = 0
+        var currentID: Int? = nodeID
+        while let id = currentID, let node = treeNodes.first(where: { $0.id == id }), let parent = node.parentId {
+            depth += 1
+            currentID = parent
+            if depth > 100 { break }
+        }
+        return depth
+    }
+
+    @discardableResult
+    func addTreeNode(parentID: Int?, title: String, note: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let siblings = parentID.map { treeChildren(of: $0) } ?? rootTreeNodes()
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO tree_nodes (parent_id, title, note, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [parentID, trimmed, note, siblings.count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateTreeNode(id: Int, title: String, note: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE tree_nodes SET title = ?, note = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveTreeNode(id: Int, direction: Int) {
+        guard let node = treeNodes.first(where: { $0.id == id }) else { return }
+        let siblings = node.parentId.map { treeChildren(of: $0) } ?? rootTreeNodes()
+        guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < siblings.count else { return }
+        let other = siblings[target]
+        _ = db.execute("UPDATE tree_nodes SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE tree_nodes SET position = ?, updated_at = ? WHERE id = ?", [siblings[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteTreeNode(_ id: Int) {
+        var toDelete = [id]
+        var index = 0
+        while index < toDelete.count {
+            let current = toDelete[index]
+            toDelete.append(contentsOf: treeNodes.filter { $0.parentId == current }.map { $0.id })
+            index += 1
+        }
+        for nodeID in toDelete {
+            _ = db.execute("DELETE FROM tree_nodes WHERE id = ?", [nodeID])
+        }
+        refresh()
     }
 
     private func loadChallengeComments() -> [ChallengeComment] {

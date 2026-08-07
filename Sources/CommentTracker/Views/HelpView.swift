@@ -49,6 +49,7 @@ struct HelpView: View {
                 miniVideosCard
                 redditCard
                 eventsCard
+                treeCard
                 pendingCard
                 dietCard
                 familyCard
@@ -439,6 +440,17 @@ struct HelpView: View {
             Label("Events — subscribe & listen", systemImage: "calendar.badge.clock")
                 .font(.headline)
             Text("Follow shows, feeds, or series you care about. Each event holds audio episodes — pick an audio file, add a title and notes, then listen right in the app with play, pause, and a progress bar. Subscribe to keep favourites on top.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var treeCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Mini Tree — grow your own branches", systemImage: "tree")
+                .font(.headline)
+            Text("A tree of ideas. Plant a root and add children to any branch — expand and collapse them, reorder siblings, and add a markdown note to each branch. Deleting a branch removes everything under it.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
