@@ -345,6 +345,15 @@ struct SprintDetailView: View {
                         Label("Edit", systemImage: "pencil")
                     }
                     .buttonStyle(.bordered)
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Close")
+                    .keyboardShortcut(.cancelAction)
                 }
 
                 Divider()
