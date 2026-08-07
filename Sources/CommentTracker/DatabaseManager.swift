@@ -393,6 +393,34 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS airtables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS airtable_columns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            airtable_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL DEFAULT 'text',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS airtable_rows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            airtable_id INTEGER NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS airtable_cells (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            row_id INTEGER NOT NULL,
+            column_id INTEGER NOT NULL,
+            value TEXT NOT NULL DEFAULT ''
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

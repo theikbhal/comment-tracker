@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -27,6 +27,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .dreams: return "Old Dreams"
         case .features: return "Feature Requests"
         case .table: return "Table Tracker"
+        case .airtable: return "Mini Airtable"
         case .pending: return "Pending"
         case .diet: return "Diet"
         case .family: return "Family"
@@ -72,6 +73,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .dreams: return "moon.stars.fill"
         case .features: return "lightbulb.fill"
         case .table: return "tablecells"
+        case .airtable: return "rectangle.3.group.fill"
         case .pending: return "hourglass"
         case .diet: return "fork.knife"
         case .family: return "person.2.fill"
@@ -175,6 +177,7 @@ struct ContentView: View {
         case .dreams: DreamsView()
         case .features: FeatureRequestsView()
         case .table: TableTrackerView()
+        case .airtable: AirtableView()
         case .pending: PendingListView()
         case .diet: DietView()
         case .family: FamilyView()

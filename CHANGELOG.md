@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.24.0]
+
+### Added
+- **Mini Airtable tab**: your own little database. Create tables with typed columns — text, number, checkbox, date — then add rows and edit cells inline. Rename columns, change their type, reorder columns and rows.
+
 ## [v1.23.0]
 
 ### Added

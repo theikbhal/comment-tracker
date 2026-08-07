@@ -45,6 +45,7 @@ struct HelpView: View {
                 dreamsCard
                 featuresCard
                 tableTrackerCard
+                airtableCard
                 pendingCard
                 dietCard
                 familyCard
@@ -391,6 +392,17 @@ struct HelpView: View {
             Label("Table Tracker — spreadsheet-style habits", systemImage: "tablecells")
                 .font(.headline)
             Text("A grid tracker: your habits down the rows, the last 14 days across the columns. Click a cell to check the day off, use the arrows to page through time, and create multiple tables. Every row shows how many days it hit.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var airtableCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Mini Airtable — your own little database", systemImage: "rectangle.3.group.fill")
+                .font(.headline)
+            Text("Create tables with typed columns — text, number, checkbox, date — then add rows and edit cells inline. Rename columns, change their type, reorder columns and rows, and delete what you don't need.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

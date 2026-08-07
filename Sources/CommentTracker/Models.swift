@@ -955,6 +955,60 @@ struct Inspiration: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Mini Airtable
+
+enum AirtableColType: String, CaseIterable, Identifiable {
+    case text, number, checkbox, date
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .text: return "Text"
+        case .number: return "Number"
+        case .checkbox: return "Checkbox"
+        case .date: return "Date"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .text: return "textformat"
+        case .number: return "number"
+        case .checkbox: return "checkmark.square"
+        case .date: return "calendar"
+        }
+    }
+}
+
+struct Airtable: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct AirtableColumn: Identifiable, Equatable {
+    let id: Int
+    var airtableId: Int
+    var name: String
+    var type: AirtableColType
+    var position: Int
+}
+
+struct AirtableRow: Identifiable, Equatable {
+    let id: Int
+    var airtableId: Int
+    var position: Int
+}
+
+struct AirtableCell: Identifiable, Equatable {
+    let id: Int
+    var rowId: Int
+    var columnId: Int
+    var value: String
+}
+
 // MARK: - Family
 
 struct FamilyMember: Identifiable, Equatable {

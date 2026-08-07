@@ -64,6 +64,10 @@ final class Store: ObservableObject {
     @Published var familyMembers: [FamilyMember] = []
     @Published var followUps: [FollowUp] = []
     @Published var inspirations: [Inspiration] = []
+    @Published var airtables: [Airtable] = []
+    @Published var airtableColumns: [AirtableColumn] = []
+    @Published var airtableRows: [AirtableRow] = []
+    @Published var airtableCells: [AirtableCell] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -176,6 +180,10 @@ final class Store: ObservableObject {
         familyMembers = loadFamilyMembers()
         followUps = loadFollowUps()
         inspirations = loadInspirations()
+        airtables = loadAirtables()
+        airtableColumns = loadAirtableColumns()
+        airtableRows = loadAirtableRows()
+        airtableCells = loadAirtableCells()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -3793,6 +3801,191 @@ final class Store: ObservableObject {
 
     func deleteInspiration(_ id: Int) {
         _ = db.execute("DELETE FROM inspirations WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Mini Airtable
+
+    private func loadAirtables() -> [Airtable] {
+        db.query("SELECT * FROM airtables ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Airtable(id: id, name: name, position: position, createdAt: Date(timeIntervalSince1970: created), updatedAt: Date(timeIntervalSince1970: updated))
+        }
+    }
+
+    private func loadAirtableColumns() -> [AirtableColumn] {
+        db.query("SELECT * FROM airtable_columns ORDER BY position ASC, id ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let airtableID = row["airtable_id"] as? Int,
+                let name = row["name"] as? String,
+                let typeRaw = row["type"] as? String,
+                let type = AirtableColType(rawValue: typeRaw),
+                let position = row["position"] as? Int
+            else { return nil }
+            return AirtableColumn(id: id, airtableId: airtableID, name: name, type: type, position: position)
+        }
+    }
+
+    private func loadAirtableRows() -> [AirtableRow] {
+        db.query("SELECT * FROM airtable_rows ORDER BY position ASC, id ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let airtableID = row["airtable_id"] as? Int,
+                let position = row["position"] as? Int
+            else { return nil }
+            return AirtableRow(id: id, airtableId: airtableID, position: position)
+        }
+    }
+
+    private func loadAirtableCells() -> [AirtableCell] {
+        db.query("SELECT * FROM airtable_cells").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let rowID = row["row_id"] as? Int,
+                let columnID = row["column_id"] as? Int
+            else { return nil }
+            return AirtableCell(id: id, rowId: rowID, columnId: columnID, value: row["value"] as? String ?? "")
+        }
+    }
+
+    func airtableColumns(for airtableID: Int) -> [AirtableColumn] {
+        airtableColumns.filter { $0.airtableId == airtableID }.sorted { $0.position < $1.position }
+    }
+
+    func airtableRows(for airtableID: Int) -> [AirtableRow] {
+        airtableRows.filter { $0.airtableId == airtableID }.sorted { $0.position < $1.position }
+    }
+
+    func airtable(_ t: Airtable, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return t.name.lowercased().contains(query.lowercased())
+    }
+
+    func cellValue(rowID: Int, columnID: Int) -> String {
+        airtableCells.first { $0.rowId == rowID && $0.columnId == columnID }?.value ?? ""
+    }
+
+    func cellIsChecked(rowID: Int, columnID: Int) -> Bool {
+        cellValue(rowID: rowID, columnID: columnID) == "1"
+    }
+
+    func setCellValue(rowID: Int, columnID: Int, _ value: String) {
+        if let cell = airtableCells.first(where: { $0.rowId == rowID && $0.columnId == columnID }) {
+            _ = db.execute("UPDATE airtable_cells SET value = ? WHERE id = ?", [value, cell.id])
+        } else {
+            _ = db.execute(
+                "INSERT INTO airtable_cells (row_id, column_id, value) VALUES (?, ?, ?)",
+                [rowID, columnID, value]
+            )
+        }
+        refresh()
+    }
+
+    @discardableResult
+    func addAirtable(name: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (airtables.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute("INSERT INTO airtables (name, position, created_at, updated_at) VALUES (?, ?, ?, ?)", [trimmed, maxPos, now, now])
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func renameAirtable(id: Int, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE airtables SET name = ?, updated_at = ? WHERE id = ?", [trimmed, Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func deleteAirtable(_ id: Int) {
+        let rows = airtableRows.filter { $0.airtableId == id }
+        let rowIDs = rows.map(\.id)
+        _ = db.execute("DELETE FROM airtables WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM airtable_columns WHERE airtable_id = ?", [id])
+        _ = db.execute("DELETE FROM airtable_rows WHERE airtable_id = ?", [id])
+        for rid in rowIDs {
+            _ = db.execute("DELETE FROM airtable_cells WHERE row_id = ?", [rid])
+        }
+        refresh()
+    }
+
+    @discardableResult
+    func addAirtableColumn(airtableID: Int, name: String, type: AirtableColType) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (airtableColumns.filter { $0.airtableId == airtableID }.map(\.position).max() ?? -1) + 1
+        _ = db.execute(
+            "INSERT INTO airtable_columns (airtable_id, name, type, position, created_at) VALUES (?, ?, ?, ?, ?)",
+            [airtableID, trimmed, type.rawValue, maxPos, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func renameAirtableColumn(id: Int, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE airtable_columns SET name = ? WHERE id = ?", [trimmed, id])
+        refresh()
+    }
+
+    func changeAirtableColumnType(id: Int, type: AirtableColType) {
+        _ = db.execute("UPDATE airtable_columns SET type = ? WHERE id = ?", [type.rawValue, id])
+        refresh()
+    }
+
+    func deleteAirtableColumn(id: Int) {
+        _ = db.execute("DELETE FROM airtable_columns WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM airtable_cells WHERE column_id = ?", [id])
+        refresh()
+    }
+
+    func moveAirtableColumn(id: Int, direction: Int) {
+        let list = airtableColumns.filter { $0.id == id }.map { $0.airtableId }.first.flatMap { tid in airtableColumns(for: tid) }
+        guard let cols = list, let index = cols.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < cols.count else { return }
+        let other = cols[target]
+        _ = db.execute("UPDATE airtable_columns SET position = ? WHERE id = ?", [other.position, id])
+        _ = db.execute("UPDATE airtable_columns SET position = ? WHERE id = ?", [cols[index].position, other.id])
+        refresh()
+    }
+
+    @discardableResult
+    func addAirtableRow(airtableID: Int) -> Int? {
+        let maxPos = (airtableRows.filter { $0.airtableId == airtableID }.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute("INSERT INTO airtable_rows (airtable_id, position, created_at, updated_at) VALUES (?, ?, ?, ?)", [airtableID, maxPos, now, now])
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func deleteAirtableRow(id: Int) {
+        _ = db.execute("DELETE FROM airtable_rows WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM airtable_cells WHERE row_id = ?", [id])
+        refresh()
+    }
+
+    func moveAirtableRow(id: Int, direction: Int) {
+        let list = airtableRows.filter { $0.id == id }.map { $0.airtableId }.first.flatMap { tid in airtableRows(for: tid) }
+        guard let rows = list, let index = rows.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < rows.count else { return }
+        let other = rows[target]
+        _ = db.execute("UPDATE airtable_rows SET position = ? WHERE id = ?", [other.position, id])
+        _ = db.execute("UPDATE airtable_rows SET position = ? WHERE id = ?", [rows[index].position, other.id])
         refresh()
     }
 
