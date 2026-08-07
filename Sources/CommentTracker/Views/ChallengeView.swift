@@ -152,6 +152,14 @@ struct ChallengeCardView: View {
         store.challengeComments(for: challenge.id).count
     }
 
+    private var prereqCount: Int {
+        store.prerequisites(of: challenge.id).count
+    }
+
+    private var blocked: Bool {
+        store.incompletePrereqCount(of: challenge.id) > 0
+    }
+
     private var renderedBody: AttributedString? {
         let trimmed = challenge.body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -191,6 +199,15 @@ struct ChallengeCardView: View {
                         .font(.caption2)
                 }
                 .foregroundStyle(.secondary)
+            }
+            if prereqCount > 0 {
+                HStack(spacing: 5) {
+                    Image(systemName: blocked ? "lock.fill" : "lock.open.fill")
+                        .font(.system(size: 9))
+                    Text(blocked ? "Waiting on \(store.incompletePrereqCount(of: challenge.id)) prerequisite\(store.incompletePrereqCount(of: challenge.id) == 1 ? "" : "s")" : "Prerequisites met")
+                        .font(.caption2)
+                }
+                .foregroundStyle(blocked ? .orange : .green)
             }
             HStack(spacing: 8) {
                 if commentCount > 0 {
@@ -370,6 +387,42 @@ struct ChallengeDetailSheet: View {
         store.challengeComments(for: existing.id)
     }
 
+    private var prereqs: [Challenge] {
+        store.prerequisites(of: existing.id)
+    }
+
+    private var addablePrereqs: [Challenge] {
+        let already = store.prerequisiteIDs(of: existing.id)
+        return store.challenges
+            .filter { $0.id != existing.id && !already.contains($0.id) }
+            .sorted { $0.title.lowercased() < $1.title.lowercased() }
+    }
+
+    private var prereqPicker: some View {
+        Menu {
+            if addablePrereqs.isEmpty {
+                Text("No other challenges to add")
+            }
+            ForEach(addablePrereqs) { c in
+                Button {
+                    store.addPrerequisite(challengeID: existing.id, prerequisiteID: c.id)
+                } label: {
+                    Label(c.title, systemImage: c.status.symbol)
+                }
+            }
+        } label: {
+            Label("Add", systemImage: "plus")
+                .font(.caption.weight(.semibold))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .disabled(addablePrereqs.isEmpty)
+    }
+
+    private func linkTo(_ prereq: Challenge) -> ChallengePrerequisiteLink? {
+        store.challengePrerequisiteLinks.first { $0.challengeId == existing.id && $0.prerequisiteId == prereq.id }
+    }
+
     private var renderedNote: AttributedString? {
         try? AttributedString(markdown: note, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
     }
@@ -385,6 +438,52 @@ struct ChallengeDetailSheet: View {
 
             TextField("Title", text: $title)
                 .textFieldStyle(.roundedBorder)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Prerequisites")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    prereqPicker
+                }
+                if prereqs.isEmpty {
+                    Text("None — this challenge can start anytime")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                ForEach(prereqs) { prereq in
+                    HStack(spacing: 6) {
+                        Image(systemName: prereq.status.symbol)
+                            .font(.system(size: 10))
+                            .foregroundStyle(prereq.status.color)
+                        Text(prereq.title)
+                            .font(.callout)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(prereq.status.displayName)
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(prereq.status.color.opacity(0.14), in: Capsule())
+                            .foregroundStyle(prereq.status.color)
+                        if let link = linkTo(prereq) {
+                            Button {
+                                store.removePrerequisite(linkID: link.id)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove prerequisite")
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            .padding(8)
+            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
 
             HStack(spacing: 14) {
                 Toggle(isOn: $hasStart) {

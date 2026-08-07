@@ -50,6 +50,7 @@ final class Store: ObservableObject {
     @Published var audioNotes: [AudioNote] = []
     @Published var challenges: [Challenge] = []
     @Published var challengeComments: [ChallengeComment] = []
+    @Published var challengePrerequisiteLinks: [ChallengePrerequisiteLink] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -127,6 +128,7 @@ final class Store: ObservableObject {
         audioNotes = loadAudioNotes()
         challenges = loadChallenges()
         challengeComments = loadChallengeComments()
+        challengePrerequisiteLinks = loadChallengePrerequisiteLinks()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -2667,6 +2669,48 @@ final class Store: ObservableObject {
     func deleteChallenge(_ id: Int) {
         _ = db.execute("DELETE FROM challenges WHERE id = ?", [id])
         _ = db.execute("DELETE FROM challenge_comments WHERE challenge_id = ?", [id])
+        _ = db.execute("DELETE FROM challenge_prerequisites WHERE challenge_id = ? OR prerequisite_id = ?", [id, id])
+        refresh()
+    }
+
+    private func loadChallengePrerequisiteLinks() -> [ChallengePrerequisiteLink] {
+        db.query("SELECT * FROM challenge_prerequisites").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let challengeID = row["challenge_id"] as? Int,
+                let prerequisiteID = row["prerequisite_id"] as? Int
+            else { return nil }
+            return ChallengePrerequisiteLink(id: id, challengeId: challengeID, prerequisiteId: prerequisiteID)
+        }
+    }
+
+    func prerequisites(of challengeID: Int) -> [Challenge] {
+        let ids = challengePrerequisiteLinks.filter { $0.challengeId == challengeID }.map(\.prerequisiteId)
+        return challenges.filter { ids.contains($0.id) }
+    }
+
+    func prerequisiteIDs(of challengeID: Int) -> [Int] {
+        challengePrerequisiteLinks.filter { $0.challengeId == challengeID }.map(\.prerequisiteId)
+    }
+
+    func incompletePrereqCount(of challengeID: Int) -> Int {
+        prerequisites(of: challengeID).filter { $0.status != .completed }.count
+    }
+
+    @discardableResult
+    func addPrerequisite(challengeID: Int, prerequisiteID: Int) -> Bool {
+        guard challengeID != prerequisiteID else { return false }
+        guard !challengePrerequisiteLinks.contains(where: { $0.challengeId == challengeID && $0.prerequisiteId == prerequisiteID }) else { return false }
+        _ = db.execute(
+            "INSERT INTO challenge_prerequisites (challenge_id, prerequisite_id) VALUES (?, ?)",
+            [challengeID, prerequisiteID]
+        )
+        refresh()
+        return true
+    }
+
+    func removePrerequisite(linkID: Int) {
+        _ = db.execute("DELETE FROM challenge_prerequisites WHERE id = ?", [linkID])
         refresh()
     }
 

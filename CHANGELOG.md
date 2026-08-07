@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.16.2]
+
+### Added
+- **Challenge prerequisites**: link any challenge to prerequisite challenges it depends on. Cards show a lock when waiting on incomplete prerequisites (green "Prerequisites met" once they're done). Add/remove prerequisites from the challenge detail sheet.
+
 ## [v1.16.1]
 
 ### Added
