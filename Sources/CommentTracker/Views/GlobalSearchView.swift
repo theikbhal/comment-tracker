@@ -101,6 +101,10 @@ struct GlobalSearchView: View {
         store.slackMessages.filter { store.slackMessage($0, matches: query) }
     }
 
+    private var calendarResults: [CalendarEvent] {
+        store.calendarEvents.filter { store.calendarEvent($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -254,6 +258,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if calendarResults.count > 0 {
+                        section("Calendar", icon: "calendar") {
+                            ForEach(calendarResults) { e in
+                                row(icon: "calendar", color: mindMapColor(e.color), title: e.title, subtitle: "\(e.day)\(e.time.isEmpty ? "" : " · \(e.time)")") {
+                                    dismiss()
+                                    onNavigate(.calendar)
+                                }
+                            }
+                        }
+                    }
                     if trackerResults.count > 0 {
                         section("Trackers", icon: "checklist") {
                             ForEach(trackerResults) { t in
@@ -354,7 +368,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -435,6 +449,8 @@ struct GlobalSearchView: View {
             Text("·")
             Text("\(slackChannelResults.count + slackMessageResults.count) slack")
             Text("·")
+            Text("\(calendarResults.count) calendar")
+            Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
             Text("\(sprintResults.count) sprints")
@@ -491,7 +507,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, urgent, holding, mind maps, blog, slack, projects, schedule, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, urgent, holding, mind maps, blog, slack, calendar, projects, schedule, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

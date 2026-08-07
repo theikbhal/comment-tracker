@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.13.0]
+
+### Added
+- New **Calendar** tab: a month grid of events with optional times and colors. Click a day to see its events in a side panel, add events per day, edit or delete from the panel, navigate months, and jump to Today.
+
 ## [v1.12.2]
 
 ### Added

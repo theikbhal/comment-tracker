@@ -215,6 +215,16 @@ final class DatabaseManager {
             text TEXT NOT NULL,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS calendar_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            day TEXT NOT NULL,
+            time TEXT NOT NULL DEFAULT '',
+            color TEXT NOT NULL DEFAULT 'blue',
+            note TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

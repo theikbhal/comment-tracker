@@ -673,6 +673,19 @@ struct SlackMessage: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Calendar events
+
+struct CalendarEvent: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var day: String
+    var time: String
+    var color: String
+    var note: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

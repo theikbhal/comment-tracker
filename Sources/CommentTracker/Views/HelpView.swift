@@ -35,6 +35,7 @@ struct HelpView: View {
                 mindMapCard
                 blogCard
                 slackCard
+                calendarCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -266,6 +267,17 @@ struct HelpView: View {
             Label("Slack — mini channels", systemImage: "bubble.left.and.bubble.right.fill")
                 .font(.headline)
             Text("A tiny in-app Slack. Channels have names and colors; post messages with Return, rename or delete a channel from right-click, and delete any message from right-click. A #general channel is created for you.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var calendarCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Calendar — events by day", systemImage: "calendar")
+                .font(.headline)
+            Text("A month grid of events with times and colors. Click a day to see its events in the side panel; click the + to add, click an event to edit. Navigate months, jump to Today, search events via ⌘K.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

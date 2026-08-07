@@ -43,6 +43,7 @@ final class Store: ObservableObject {
     @Published var blogPosts: [BlogPost] = []
     @Published var slackChannels: [SlackChannel] = []
     @Published var slackMessages: [SlackMessage] = []
+    @Published var calendarEvents: [CalendarEvent] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -110,6 +111,7 @@ final class Store: ObservableObject {
         blogPosts = loadBlogPosts()
         slackChannels = loadSlackChannels()
         slackMessages = loadSlackMessages()
+        calendarEvents = loadCalendarEvents()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -1160,6 +1162,53 @@ final class Store: ObservableObject {
         )
     }
 
+    // MARK: - Calendar
+
+    func calendarEvent(_ e: CalendarEvent, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return e.title.lowercased().contains(q) || e.note.lowercased().contains(q)
+    }
+
+    func events(on day: String) -> [CalendarEvent] {
+        calendarEvents
+            .filter { $0.day == day }
+            .sorted {
+                if $0.time != $1.time { return $0.time < $1.time }
+                return $0.createdAt < $1.createdAt
+            }
+    }
+
+    func eventsInMonth(of date: Date) -> [CalendarEvent] {
+        let prefix = String(dayString(date).prefix(7))
+        return calendarEvents.filter { $0.day.hasPrefix(prefix) }
+    }
+
+    func addCalendarEvent(title: String, day: String, time: String = "", color: String = "blue", note: String = "") {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO calendar_events (title, day, time, color, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, day, time, color, note, now, now]
+        )
+        refresh()
+    }
+
+    func updateCalendarEvent(id: Int, title: String? = nil, time: String? = nil, color: String? = nil, note: String? = nil) {
+        guard let event = calendarEvents.first(where: { $0.id == id }) else { return }
+        _ = db.execute(
+            "UPDATE calendar_events SET title = ?, time = ?, color = ?, note = ?, updated_at = ? WHERE id = ?",
+            [title ?? event.title, time ?? event.time, color ?? event.color, note ?? event.note, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteCalendarEvent(_ id: Int) {
+        _ = db.execute("DELETE FROM calendar_events WHERE id = ?", [id])
+        refresh()
+    }
+
     // MARK: - Backup & Restore
 
     @discardableResult
@@ -2178,6 +2227,28 @@ final class Store: ObservableObject {
                 author: author,
                 text: text,
                 createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadCalendarEvents() -> [CalendarEvent] {
+        db.query("SELECT * FROM calendar_events ORDER BY day ASC, time ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let day = row["day"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return CalendarEvent(
+                id: id,
+                title: title,
+                day: day,
+                time: row["time"] as? String ?? "",
+                color: row["color"] as? String ?? "blue",
+                note: row["note"] as? String ?? "",
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
             )
         }
     }
