@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, pending, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -28,6 +28,10 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .features: return "Feature Requests"
         case .table: return "Table Tracker"
         case .pending: return "Pending"
+        case .diet: return "Diet"
+        case .family: return "Family"
+        case .followup: return "Follow-ups"
+        case .inspire: return "Inspire"
         case .tracker: return "Tracker"
         case .people: return "People"
         case .thoughts: return "Thoughts"
@@ -69,6 +73,10 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .features: return "lightbulb.fill"
         case .table: return "tablecells"
         case .pending: return "hourglass"
+        case .diet: return "fork.knife"
+        case .family: return "person.2.fill"
+        case .followup: return "arrow.triangle.2.circlepath"
+        case .inspire: return "sparkles"
         case .tracker: return "checklist"
         case .people: return "person.2"
         case .thoughts: return "lightbulb"
@@ -168,6 +176,10 @@ struct ContentView: View {
         case .features: FeatureRequestsView()
         case .table: TableTrackerView()
         case .pending: PendingListView()
+        case .diet: DietView()
+        case .family: FamilyView()
+        case .followup: FollowUpView()
+        case .inspire: InspireView()
         case .tracker: TrackerView()
         case .people: PeopleView()
         case .thoughts: ThoughtsView()

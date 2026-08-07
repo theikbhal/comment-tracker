@@ -60,6 +60,10 @@ final class Store: ObservableObject {
     @Published var tableRows: [TableRow] = []
     @Published var tableCells: [TableCell] = []
     @Published var pendingItems: [PendingItem] = []
+    @Published var dietEntries: [DietEntry] = []
+    @Published var familyMembers: [FamilyMember] = []
+    @Published var followUps: [FollowUp] = []
+    @Published var inspirations: [Inspiration] = []
     @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
@@ -168,6 +172,10 @@ final class Store: ObservableObject {
         tableRows = loadTableRows()
         tableCells = loadTableCells()
         pendingItems = loadPendingItems()
+        dietEntries = loadDietEntries()
+        familyMembers = loadFamilyMembers()
+        followUps = loadFollowUps()
+        inspirations = loadInspirations()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -3476,6 +3484,315 @@ final class Store: ObservableObject {
 
     func deletePendingItem(_ id: Int) {
         _ = db.execute("DELETE FROM pending_items WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Diet
+
+    private func loadDietEntries() -> [DietEntry] {
+        db.query("SELECT * FROM diet_entries ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let day = row["day"] as? String,
+                let mealRaw = row["meal"] as? String,
+                let meal = DietMeal(rawValue: mealRaw),
+                let food = row["food"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return DietEntry(
+                id: id,
+                day: day,
+                meal: meal,
+                food: food,
+                note: row["note"] as? String ?? "",
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func dietEntries(for day: String) -> [DietEntry] {
+        dietEntries.filter { $0.day == day }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func dietEntries(for meal: DietMeal, on day: String) -> [DietEntry] {
+        dietEntries.filter { $0.day == day && $0.meal == meal }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func dietEntry(_ e: DietEntry, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return e.food.lowercased().contains(q) || e.note.lowercased().contains(q) || e.meal.displayName.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addDietEntry(day: String, meal: DietMeal, food: String, note: String) -> Int? {
+        let trimmed = food.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        _ = db.execute(
+            "INSERT INTO diet_entries (day, meal, food, note, created_at) VALUES (?, ?, ?, ?, ?)",
+            [day, meal.rawValue, trimmed, note, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateDietEntry(id: Int, food: String, note: String) {
+        let trimmed = food.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE diet_entries SET food = ?, note = ? WHERE id = ?", [trimmed, note, id])
+        refresh()
+    }
+
+    func deleteDietEntry(_ id: Int) {
+        _ = db.execute("DELETE FROM diet_entries WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Family
+
+    var sortedFamilyMembers: [FamilyMember] {
+        familyMembers.sorted { $0.position < $1.position }
+    }
+
+    private func loadFamilyMembers() -> [FamilyMember] {
+        db.query("SELECT * FROM family_members ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let relation = row["relation"] as? String,
+                let birthday = row["birthday"] as? String,
+                let note = row["note"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return FamilyMember(
+                id: id,
+                name: name,
+                relation: relation,
+                birthday: birthday,
+                note: note,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func familyMember(_ m: FamilyMember, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return m.name.lowercased().contains(q) || m.relation.lowercased().contains(q) || m.note.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addFamilyMember(name: String, relation: String, birthday: String, note: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (familyMembers.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO family_members (name, relation, birthday, note, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, relation, birthday, note, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateFamilyMember(id: Int, name: String, relation: String, birthday: String, note: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE family_members SET name = ?, relation = ?, birthday = ?, note = ?, updated_at = ? WHERE id = ?",
+            [trimmed, relation, birthday, note, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveFamilyMember(id: Int, direction: Int) {
+        let list = sortedFamilyMembers
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE family_members SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE family_members SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteFamilyMember(_ id: Int) {
+        _ = db.execute("DELETE FROM family_members WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Follow-ups
+
+    var openFollowUps: [FollowUp] {
+        followUps.filter { !$0.done }
+    }
+
+    var doneFollowUps: [FollowUp] {
+        followUps.filter(\.done)
+    }
+
+    private func loadFollowUps() -> [FollowUp] {
+        db.query("SELECT * FROM followups ORDER BY done ASC, date ASC, position ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let note = row["note"] as? String,
+                let date = row["date"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return FollowUp(
+                id: id,
+                title: title,
+                note: note,
+                date: date,
+                done: (row["done"] as? Int) == 1,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func followUp(_ f: FollowUp, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return f.title.lowercased().contains(q) || f.note.lowercased().contains(q) || f.dateText.lowercased().contains(q)
+    }
+
+    func followUpsSorted(_ includeDone: Bool) -> [FollowUp] {
+        var list = openFollowUps
+        if includeDone {
+            list += doneFollowUps.sorted { $0.updatedAt > $1.updatedAt }
+        }
+        return list
+    }
+
+    @discardableResult
+    func addFollowUp(title: String, note: String, date: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (followUps.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO followups (title, note, date, done, position, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?, ?)",
+            [trimmed, note, date, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateFollowUp(id: Int, title: String, note: String, date: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE followups SET title = ?, note = ?, date = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, date, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func toggleFollowUpDone(_ id: Int) {
+        guard let item = followUps.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE followups SET done = ?, updated_at = ? WHERE id = ?", [item.done ? 0 : 1, Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func deleteFollowUp(_ id: Int) {
+        _ = db.execute("DELETE FROM followups WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Inspirations
+
+    var sortedInspirations: [Inspiration] {
+        inspirations.sorted { $0.position < $1.position }
+    }
+
+    private func loadInspirations() -> [Inspiration] {
+        db.query("SELECT * FROM inspirations ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let source = row["source"] as? String,
+                let note = row["note"] as? String,
+                let link = row["link"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Inspiration(
+                id: id,
+                text: text,
+                source: source,
+                note: note,
+                link: link,
+                bookmarked: (row["bookmarked"] as? Int) == 1,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func inspiration(_ i: Inspiration, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return i.text.lowercased().contains(q) || i.source.lowercased().contains(q) || i.note.lowercased().contains(q) || i.link.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addInspiration(text: String, source: String, note: String, link: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (inspirations.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO inspirations (text, source, note, link, bookmarked, position, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?)",
+            [trimmed, source, note, link, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateInspiration(id: Int, text: String, source: String, note: String, link: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE inspirations SET text = ?, source = ?, note = ?, link = ?, updated_at = ? WHERE id = ?",
+            [trimmed, source, note, link, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func toggleInspirationBookmark(_ id: Int) {
+        guard let item = inspirations.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE inspirations SET bookmarked = ?, updated_at = ? WHERE id = ?", [item.bookmarked ? 0 : 1, Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func moveInspiration(id: Int, direction: Int) {
+        let list = sortedInspirations
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE inspirations SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE inspirations SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteInspiration(_ id: Int) {
+        _ = db.execute("DELETE FROM inspirations WHERE id = ?", [id])
         refresh()
     }
 

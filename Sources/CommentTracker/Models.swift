@@ -898,6 +898,130 @@ struct FeatureRequestComment: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Diet
+
+enum DietMeal: String, CaseIterable, Identifiable {
+    case breakfast, lunch, dinner, snack
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .breakfast: return "Breakfast"
+        case .lunch: return "Lunch"
+        case .dinner: return "Dinner"
+        case .snack: return "Snacks"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .breakfast: return "sunrise.fill"
+        case .lunch: return "sun.max.fill"
+        case .dinner: return "moon.stars.fill"
+        case .snack: return "takeoutbag.and.cup.and.straw.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .breakfast: return .orange
+        case .lunch: return .yellow
+        case .dinner: return .purple
+        case .snack: return .pink
+        }
+    }
+}
+
+struct DietEntry: Identifiable, Equatable {
+    let id: Int
+    var day: String
+    var meal: DietMeal
+    var food: String
+    var note: String
+    var createdAt: Date
+}
+
+// MARK: - Inspirations
+
+struct Inspiration: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var source: String
+    var note: String
+    var link: String
+    var bookmarked: Bool
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+// MARK: - Family
+
+struct FamilyMember: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var relation: String
+    var birthday: String
+    var note: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var hasBirthday: Bool { !birthday.isEmpty }
+
+    var birthdayText: String {
+        guard let date = dateFromDay(birthday) else { return birthday }
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f.string(from: date)
+    }
+
+    var daysUntilBirthday: Int? {
+        guard let date = dateFromDay(birthday) else { return nil }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        var next = cal.dateComponents([.month, .day], from: date)
+        next.year = cal.component(.year, from: today)
+        var nextDate = cal.date(from: next) ?? today
+        if nextDate < today, let y = next.year {
+            next.year = y + 1
+            nextDate = cal.date(from: next) ?? nextDate
+        }
+        return cal.dateComponents([.day], from: today, to: nextDate).day
+    }
+}
+
+// MARK: - Follow-ups
+
+struct FollowUp: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var note: String
+    var date: String
+    var done: Bool
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var hasDate: Bool { !date.isEmpty }
+
+    var isOverdue: Bool {
+        guard !done, let d = dateFromDay(date) else { return false }
+        return d < Calendar.current.startOfDay(for: Date())
+    }
+
+    var dateText: String {
+        guard let d = dateFromDay(date) else { return date }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        if cal.isDate(d, inSameDayAs: today) { return "Today" }
+        if cal.isDate(d, inSameDayAs: cal.date(byAdding: .day, value: 1, to: today) ?? today) { return "Tomorrow" }
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return f.string(from: d)
+    }
+}
+
 // MARK: - Table tracker (spreadsheet-style habits)
 
 struct TableTracker: Identifiable, Equatable {

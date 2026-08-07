@@ -2,6 +2,14 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.23.0]
+
+### Added
+- **Diet tab**: log food by meal (Breakfast, Lunch, Dinner, Snacks) with optional notes, flip through days, search, and per-meal counts.
+- **Family tab**: family members with relation, optional birthday countdown (orange in the last week, pink today), markdown notes, reorderable.
+- **Follow-ups tab**: things to come back to, with optional dates. Today/Tomorrow chips, overdue glows red, check off when handled.
+- **Inspire tab**: quotes and lines that lift you — the words, a source, optional link, markdown note, and bookmarking. Filter to bookmarked anytime.
+
 ## [v1.22.0]
 
 ### Added

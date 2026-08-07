@@ -46,6 +46,10 @@ struct HelpView: View {
                 featuresCard
                 tableTrackerCard
                 pendingCard
+                dietCard
+                familyCard
+                followUpCard
+                inspireCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -398,6 +402,50 @@ struct HelpView: View {
             Label("Pending — the list that keeps your mind clear", systemImage: "hourglass")
                 .font(.headline)
             Text("A simple pending list. Add items, check them done, edit the markdown note, reorder the open ones, and search. Toggle the Done filter to review what you've cleared.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var dietCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Diet — what you ate, day by day", systemImage: "fork.knife")
+                .font(.headline)
+            Text("Log food by meal — Breakfast, Lunch, Dinner, Snacks — with an optional note. Flip through days, search, and see per-meal counts at a glance.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var familyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Family — the people who matter", systemImage: "person.2.fill")
+                .font(.headline)
+            Text("Keep your family close: name, relation, an optional birthday (with a days-until countdown that turns orange in the last week), and a markdown note. Reorder as you like.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var followUpCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Follow-ups — don't let things slip", systemImage: "arrow.triangle.2.circlepath")
+                .font(.headline)
+            Text("Track things you need to come back to. Set an optional date — Today/Tomorrow chips, overdue items glow red. Check them off when handled.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var inspireCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Inspire — quotes that lift you", systemImage: "sparkles")
+                .font(.headline)
+            Text("Collect quotes, verses, and lines that move you. Each piece has the words, a source, an optional link, and a markdown note. Bookmark the ones that matter and filter to them.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

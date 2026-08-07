@@ -145,6 +145,22 @@ struct GlobalSearchView: View {
         store.pendingItems.filter { store.pendingItem($0, matches: query) }
     }
 
+    private var dietResults: [DietEntry] {
+        store.dietEntries.filter { store.dietEntry($0, matches: query) }
+    }
+
+    private var familyResults: [FamilyMember] {
+        store.familyMembers.filter { store.familyMember($0, matches: query) }
+    }
+
+    private var followUpResults: [FollowUp] {
+        store.followUps.filter { store.followUp($0, matches: query) }
+    }
+
+    private var inspirationResults: [Inspiration] {
+        store.inspirations.filter { store.inspiration($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -408,6 +424,46 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if dietResults.count > 0 {
+                        section("Diet", icon: "fork.knife") {
+                            ForEach(dietResults) { e in
+                                row(icon: "fork.knife", color: .green, title: e.food, subtitle: "\(e.meal.displayName) · \(e.day)") {
+                                    dismiss()
+                                    onNavigate(.diet)
+                                }
+                            }
+                        }
+                    }
+                    if familyResults.count > 0 {
+                        section("Family", icon: "person.2.fill") {
+                            ForEach(familyResults) { m in
+                                row(icon: "person.2.fill", color: .green, title: m.name, subtitle: m.relation.isEmpty ? "Family" : m.relation) {
+                                    dismiss()
+                                    onNavigate(.family)
+                                }
+                            }
+                        }
+                    }
+                    if followUpResults.count > 0 {
+                        section("Follow-ups", icon: "arrow.triangle.2.circlepath") {
+                            ForEach(followUpResults) { f in
+                                row(icon: "arrow.triangle.2.circlepath", color: .blue, title: f.title, subtitle: f.done ? "Done" : (f.hasDate ? f.dateText : "Follow-up")) {
+                                    dismiss()
+                                    onNavigate(.followup)
+                                }
+                            }
+                        }
+                    }
+                    if inspirationResults.count > 0 {
+                        section("Inspire", icon: "sparkles") {
+                            ForEach(inspirationResults) { i in
+                                row(icon: "sparkles", color: .pink, title: i.text, subtitle: i.source.isEmpty ? "Inspiration" : i.source) {
+                                    dismiss()
+                                    onNavigate(.inspire)
+                                }
+                            }
+                        }
+                    }
                     if trackerResults.count > 0 {
                         section("Trackers", icon: "checklist") {
                             ForEach(trackerResults) { t in
@@ -508,7 +564,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && pendingResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -610,6 +666,14 @@ struct GlobalSearchView: View {
             Text("\(tableResults.count) tables")
             Text("·")
             Text("\(pendingResults.count) pending")
+            Text("·")
+            Text("\(dietResults.count) diet")
+            Text("·")
+            Text("\(familyResults.count) family")
+            Text("·")
+            Text("\(followUpResults.count) follow-ups")
+            Text("·")
+            Text("\(inspirationResults.count) inspiration")
             Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
