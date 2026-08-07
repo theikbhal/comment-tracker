@@ -510,6 +510,18 @@ struct DeepWorkSession: Identifiable, Equatable {
 
 let deepWorkPresets: [Int] = [15, 30, 45, 60, 90, 120]
 
+// MARK: - Weekly Schedule
+
+let scheduleSlotNames = ["Morning", "Noon", "Afternoon", "Evening"]
+
+struct ScheduleEntry: Identifiable, Equatable {
+    let id: Int
+    var day: Int
+    var slot: Int
+    var task: String
+    var updatedAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

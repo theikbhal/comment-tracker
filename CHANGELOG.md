@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.7.1]
+
+### Added
+- New **Schedule** tab: a weekly grid (7 days × Morning/Noon/Afternoon/Evening) to plan when to work and what to work on. Click a cell to set or clear it; today's column is highlighted.
+
 ## [v1.7.0]
 
 ### Added

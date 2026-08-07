@@ -29,6 +29,7 @@ struct HelpView: View {
                 parallelCard
                 projectCard
                 deepWorkCard
+                scheduleCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -194,6 +195,17 @@ struct HelpView: View {
             Label("Deep Work — a dedicated block", systemImage: "brain.head.profile")
                 .font(.headline)
             Text("A single focus timer for longer blocks (15–120 min). Phones down, one thing. When a block completes, a Win is logged automatically so your progress is recorded.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var scheduleCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Schedule — when to work, what to work on", systemImage: "calendar.badge.clock")
+                .font(.headline)
+            Text("A weekly grid across 7 days and 4 time slots (Morning / Noon / Afternoon / Evening). Click a cell to plan what you'll work on then; today's column is highlighted.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

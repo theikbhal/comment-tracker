@@ -35,6 +35,7 @@ final class Store: ObservableObject {
     @Published var parallel: [ParallelItem] = []
     @Published var projects: [Project] = []
     @Published var deepWork: [DeepWorkSession] = []
+    @Published var schedule: [ScheduleEntry] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -93,6 +94,7 @@ final class Store: ObservableObject {
         parallel = loadParallel()
         projects = loadProjects()
         deepWork = loadDeepWork()
+        schedule = loadSchedule()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -756,6 +758,35 @@ final class Store: ObservableObject {
     func deleteDeepWork(_ id: Int) {
         _ = db.execute("DELETE FROM deepwork_sessions WHERE id = ?", [id])
         refresh()
+    }
+
+    // MARK: - Schedule
+
+    func scheduleEntry(day: Int, slot: Int) -> ScheduleEntry? {
+        schedule.first { $0.day == day && $0.slot == slot }
+    }
+
+    func setScheduleTask(day: Int, slot: Int, task: String) {
+        let trimmed = task.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = Date().timeIntervalSince1970
+        if trimmed.isEmpty {
+            _ = db.execute("DELETE FROM schedule WHERE day = ? AND slot = ?", [day, slot])
+        } else if scheduleEntry(day: day, slot: slot) != nil {
+            _ = db.execute("UPDATE schedule SET task = ?, updated_at = ? WHERE day = ? AND slot = ?", [trimmed, now, day, slot])
+        } else {
+            _ = db.execute("INSERT INTO schedule (day, slot, task, updated_at) VALUES (?, ?, ?, ?)", [day, slot, trimmed, now])
+        }
+        refresh()
+    }
+
+    func clearScheduleSlot(day: Int, slot: Int) {
+        _ = db.execute("DELETE FROM schedule WHERE day = ? AND slot = ?", [day, slot])
+        refresh()
+    }
+
+    func schedule(_ e: ScheduleEntry, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return e.task.lowercased().contains(query.lowercased())
     }
 
     // MARK: - Backup & Restore
@@ -1620,6 +1651,19 @@ final class Store: ObservableObject {
                 endedAt: Date(timeIntervalSince1970: ended),
                 completed: completed == 1
             )
+        }
+    }
+
+    private func loadSchedule() -> [ScheduleEntry] {
+        db.query("SELECT * FROM schedule").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let day = row["day"] as? Int,
+                let slot = row["slot"] as? Int,
+                let task = row["task"] as? String,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return ScheduleEntry(id: id, day: day, slot: slot, task: task, updatedAt: Date(timeIntervalSince1970: updated))
         }
     }
 
