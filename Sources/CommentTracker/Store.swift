@@ -589,6 +589,33 @@ final class Store: ObservableObject {
         refresh()
     }
 
+    func addAllEmptyCards(target: Int = 313) -> Int {
+        let existing = cards.count
+        let toAdd = max(0, target - existing)
+        if toAdd == 0 { return 0 }
+        let now = Date().timeIntervalSince1970
+        for _ in 0..<toAdd {
+            _ = db.execute(
+                "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                ["", "Empty", "", "", now, now]
+            )
+        }
+        refresh()
+        return toAdd
+    }
+
+    func resetDeck(target: Int = 313) {
+        _ = db.execute("DELETE FROM wordcards")
+        let now = Date().timeIntervalSince1970
+        for _ in 0..<max(0, target) {
+            _ = db.execute(
+                "INSERT INTO wordcards (word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                ["", "Empty", "", "", now, now]
+            )
+        }
+        refresh()
+    }
+
     var cardGroups: [String] {
         var seen: [String] = []
         for c in cards {

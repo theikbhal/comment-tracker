@@ -8,6 +8,9 @@ struct Cards313View: View {
     @State private var searchText = ""
     @State private var groupFilter = "All"
     @State private var editingCard: WordCard?
+    @State private var confirmReset = false
+    @State private var hideEmpty = false
+    @State private var message = ""
 
     private var groups: [String] { ["All"] + store.cardGroups }
 
@@ -15,6 +18,9 @@ struct Cards313View: View {
         var list = store.cards
         if groupFilter != "All" {
             list = list.filter { $0.groupName == groupFilter }
+        }
+        if hideEmpty {
+            list = list.filter { !$0.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         }
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !q.isEmpty {
@@ -56,6 +62,15 @@ struct Cards313View: View {
             )
             .environmentObject(store)
         }
+        .confirmationDialog("Reset the 313-card deck?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Reset — start a fresh empty deck", role: .destructive) {
+                store.resetDeck()
+                message = "Deck reset to 313 empty cards"
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This deletes all cards and creates a fresh deck of 313 empty cards. Back this up first if you want to keep the current deck.")
+        }
     }
 
     private var header: some View {
@@ -71,6 +86,33 @@ struct Cards313View: View {
             Spacer()
             searchField
             groupMenu
+            Toggle(isOn: $hideEmpty) {
+                Label("Hide empty", systemImage: "eye.slash")
+                    .font(.caption)
+            }
+            .toggleStyle(.checkbox)
+            .help("Hide empty cards")
+            if !message.isEmpty {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Button {
+                let added = store.addAllEmptyCards()
+                message = added > 0 ? "Added \(added) empty cards" : "Deck is already full (313)"
+            } label: {
+                Label("Add 313 empty", systemImage: "rectangle.stack.badge.plus")
+            }
+            .buttonStyle(.bordered)
+            .help("Top the deck up to 313 empty cards")
+            Button {
+                confirmReset = true
+            } label: {
+                Label("Reset", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .foregroundStyle(.red)
+            .help("Delete all cards and start a fresh empty deck")
             Button {
                 exportCards()
             } label: {
@@ -175,10 +217,18 @@ struct CardCell: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(card.word)
-                .font(.title3.bold())
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Empty card")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(card.word)
+                    .font(.title3.bold())
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             HStack(spacing: 5) {
                 if !card.groupName.isEmpty {
                     Text(card.groupName)
@@ -195,10 +245,15 @@ struct CardCell: View {
         }
         .padding(12)
         .frame(minHeight: 74, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+        .background(
+            card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? Color.gray.opacity(0.04)
+                : Color(nsColor: .controlBackgroundColor),
+            in: RoundedRectangle(cornerRadius: 10)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                .stroke(card.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.1) : Color.gray.opacity(0.15), lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture {
