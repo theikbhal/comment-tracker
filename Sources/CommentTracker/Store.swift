@@ -28,6 +28,7 @@ final class Store: ObservableObject {
     @Published var thoughts: [Thought] = []
 
     @Published var wins: [Win] = []
+    @Published var fails: [Fail] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -79,6 +80,7 @@ final class Store: ObservableObject {
         videoComments = loadVideoComments()
         thoughts = loadThoughts()
         wins = loadWins()
+        fails = loadFails()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -491,6 +493,36 @@ final class Store: ObservableObject {
         guard let w = wins.first(where: { $0.id == id }) else { return false }
         let newValue = w.bookmarked ? 0 : 1
         _ = db.execute("UPDATE wins SET bookmarked = ? WHERE id = ?", [newValue, id])
+        refresh()
+        return newValue == 1
+    }
+
+    // MARK: - Fails
+
+    func fail(_ f: Fail, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return f.text.lowercased().contains(query.lowercased())
+    }
+
+    func addFail(text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO fails (text, bookmarked, created_at) VALUES (?, 0, ?)",
+            [trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteFail(_ id: Int) {
+        _ = db.execute("DELETE FROM fails WHERE id = ?", [id])
+        refresh()
+    }
+
+    func toggleFailBookmark(_ id: Int) -> Bool {
+        guard let f = fails.first(where: { $0.id == id }) else { return false }
+        let newValue = f.bookmarked ? 0 : 1
+        _ = db.execute("UPDATE fails SET bookmarked = ? WHERE id = ?", [newValue, id])
         refresh()
         return newValue == 1
     }
@@ -1224,6 +1256,22 @@ final class Store: ObservableObject {
                 let created = row["created_at"] as? Double
             else { return nil }
             return Win(
+                id: id,
+                text: text,
+                bookmarked: (row["bookmarked"] as? Int ?? 0) == 1,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadFails() -> [Fail] {
+        db.query("SELECT * FROM fails ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Fail(
                 id: id,
                 text: text,
                 bookmarked: (row["bookmarked"] as? Int ?? 0) == 1,

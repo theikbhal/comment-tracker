@@ -369,6 +369,15 @@ struct Win: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Fails (didn't-work feed)
+
+struct Fail: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var bookmarked: Bool
+    var createdAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

@@ -28,6 +28,7 @@ struct HelpView: View {
                 trackerCard
                 thoughtsCard
                 winsCard
+                failsCard
                 linksCard
                 cardsCard
                 pomodoroCard
@@ -213,6 +214,19 @@ struct HelpView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text("• Just won something? Type it in the compose box and hit Celebrate.")
+                    .font(.caption)
+        }
+        .card()
+    }
+
+    private var failsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Fails — lessons to learn from", systemImage: "xmark.seal")
+                .font(.headline)
+            Text("A Twitter/X-style timeline of things that didn't work. Same shape as wins, but for what missed — so the pattern becomes visible instead of eating you quietly.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("• Just stumbled? Type it in the compose box and hit Log the fail.")
                     .font(.caption)
         }
         .card()

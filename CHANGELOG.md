@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.5.0]
+
+### Added
+- New **Fails** tab: a Twitter/X-style timeline of things that didn't work, mirroring Wins. Compose at the top, newest first, bookmark + filter, search, paginated "Show older fails", delete via right-click. Surfacing what missed makes the pattern visible instead of eating you quietly.
+
 ## [v1.4.3]
 
 ### Fixed
