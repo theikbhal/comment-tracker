@@ -27,6 +27,7 @@ struct HelpView: View {
                 buckCard
                 focusCard
                 parallelCard
+                projectCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -170,6 +171,17 @@ struct HelpView: View {
             Label("Parallel — 3 threads + a catch-all", systemImage: "square.split.3x1")
                 .font(.headline)
             Text("Keep three things running side by side (Thing 1 / 2 / 3) plus an Unorganized bucket for everything that doesn't fit yet. Drag items between lanes or use right-click to move them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var projectCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Projects — track what you're working on", systemImage: "shippingbox.fill")
+                .font(.headline)
+            Text("Each project has a status: Working (the one, single current focus), In Progress, or Completed. Hit Start to make it the active project, Stop to drop it back. Store a \"how to start\" and a \"how to stop\" note on each project so switching in and out is easy.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

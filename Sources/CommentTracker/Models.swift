@@ -458,6 +458,46 @@ struct ParallelItem: Identifiable, Equatable {
     }
 }
 
+// MARK: - Project Tracker
+
+enum ProjectStatus: String, CaseIterable {
+    case working, inProgress, completed
+
+    var displayName: String {
+        switch self {
+        case .working: return "Working"
+        case .inProgress: return "In Progress"
+        case .completed: return "Completed"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .working: return "play.circle.fill"
+        case .inProgress: return "pause.circle"
+        case .completed: return "checkmark.circle.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .working: return .green
+        case .inProgress: return .blue
+        case .completed: return .gray
+        }
+    }
+}
+
+struct Project: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var status: ProjectStatus
+    var startNote: String
+    var stopNote: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

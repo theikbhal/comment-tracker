@@ -33,6 +33,7 @@ final class Store: ObservableObject {
     @Published var bucks: [Buck] = []
     @Published var focusSessions: [Focus] = []
     @Published var parallel: [ParallelItem] = []
+    @Published var projects: [Project] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -89,6 +90,7 @@ final class Store: ObservableObject {
         bucks = loadBucks()
         focusSessions = loadFocus()
         parallel = loadParallel()
+        projects = loadProjects()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -669,6 +671,60 @@ final class Store: ObservableObject {
 
     func deleteParallelItem(_ id: Int) {
         _ = db.execute("DELETE FROM parallel WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Project Tracker
+
+    func project(_ p: Project, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return p.name.lowercased().contains(q) || p.startNote.lowercased().contains(q) || p.stopNote.lowercased().contains(q)
+    }
+
+    func addProject(name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO projects (name, status, start_note, stop_note, created_at, updated_at) VALUES (?, 'inProgress', '', '', ?, ?)",
+            [trimmed, Date().timeIntervalSince1970, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func startProject(_ id: Int) {
+        let now = Date().timeIntervalSince1970
+        _ = db.execute("UPDATE projects SET status = 'inProgress', updated_at = ? WHERE id != ? AND status = 'working'", [now, id])
+        _ = db.execute("UPDATE projects SET status = 'working', updated_at = ? WHERE id = ?", [now, id])
+        refresh()
+    }
+
+    func stopProject(_ id: Int) {
+        _ = db.execute(
+            "UPDATE projects SET status = 'inProgress', updated_at = ? WHERE id = ?",
+            [Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func setProjectStatus(_ id: Int, _ status: ProjectStatus) {
+        _ = db.execute(
+            "UPDATE projects SET status = ?, updated_at = ? WHERE id = ?",
+            [status.rawValue, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func updateProjectNotes(_ id: Int, startNote: String, stopNote: String) {
+        _ = db.execute(
+            "UPDATE projects SET start_note = ?, stop_note = ?, updated_at = ? WHERE id = ?",
+            [startNote, stopNote, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteProject(_ id: Int) {
+        _ = db.execute("DELETE FROM projects WHERE id = ?", [id])
         refresh()
     }
 
@@ -1491,6 +1547,30 @@ final class Store: ObservableObject {
                 let created = row["created_at"] as? Double
             else { return nil }
             return ParallelItem(id: id, lane: lane, text: text, note: note, createdAt: Date(timeIntervalSince1970: created))
+        }
+    }
+
+    private func loadProjects() -> [Project] {
+        let order = "CASE status WHEN 'working' THEN 0 WHEN 'inProgress' THEN 1 ELSE 2 END, updated_at DESC"
+        return db.query("SELECT * FROM projects ORDER BY \(order)").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let statusRaw = row["status"] as? String,
+                let startNote = row["start_note"] as? String,
+                let stopNote = row["stop_note"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Project(
+                id: id,
+                name: name,
+                status: ProjectStatus(rawValue: statusRaw) ?? .inProgress,
+                startNote: startNote,
+                stopNote: stopNote,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
         }
     }
 

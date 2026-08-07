@@ -134,6 +134,15 @@ final class DatabaseManager {
             note TEXT NOT NULL DEFAULT '',
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'inProgress',
+            start_note TEXT NOT NULL DEFAULT '',
+            stop_note TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

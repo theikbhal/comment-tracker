@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.6.3]
+
+### Added
+- New **Projects** tab: track what you're working on. Each project is Working (the single current project), In Progress, or Completed. One-click Start/Stop, reopen, and per-project "how to start" / "how to stop" notes so switching in and out is easy.
+
 ## [v1.6.2]
 
 ### Added
