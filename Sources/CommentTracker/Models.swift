@@ -1062,6 +1062,36 @@ struct RedditComment: Identifiable, Equatable {
     var isReply: Bool { parentId != nil }
 }
 
+// MARK: - Events (subscribe & listen)
+
+struct EventShow: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var description: String
+    var subscribed: Bool
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct EventEpisode: Identifiable, Equatable {
+    let id: Int
+    var eventId: Int
+    var title: String
+    var note: String
+    var filename: String
+    var duration: Double
+    var createdAt: Date
+    var updatedAt: Date
+
+    var durationText: String {
+        let total = Int(duration.rounded())
+        let m = total / 60
+        let s = total % 60
+        return m > 0 ? "\(m)m \(s)s" : "\(s)s"
+    }
+}
+
 // MARK: - Family
 
 struct FamilyMember: Identifiable, Equatable {

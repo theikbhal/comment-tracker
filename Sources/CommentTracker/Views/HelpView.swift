@@ -48,6 +48,7 @@ struct HelpView: View {
                 airtableCard
                 miniVideosCard
                 redditCard
+                eventsCard
                 pendingCard
                 dietCard
                 familyCard
@@ -427,6 +428,17 @@ struct HelpView: View {
             Label("Reddit — your own little community", systemImage: "bubble.left.and.bubble.right.fill")
                 .font(.headline)
             Text("Post threads with a title, markdown body, and a sub tag. Upvote and downvote, and open any post for a comments feed with nested reply threads.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var eventsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Events — subscribe & listen", systemImage: "calendar.badge.clock")
+                .font(.headline)
+            Text("Follow shows, feeds, or series you care about. Each event holds audio episodes — pick an audio file, add a title and notes, then listen right in the app with play, pause, and a progress bar. Subscribe to keep favourites on top.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

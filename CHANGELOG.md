@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.27.0]
+
+### Added
+- **Events tab**: subscribe & listen. Follow shows, feeds, or series you care about. Each event holds audio episodes — pick an audio file, add a title and markdown notes, then listen right in the app with play, pause, stop, and a progress bar. Subscribed events stay on top.
+
 ## [v1.26.0]
 
 ### Added

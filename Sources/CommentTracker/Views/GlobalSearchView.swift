@@ -153,6 +153,10 @@ struct GlobalSearchView: View {
         store.redditPosts.filter { store.redditPost($0, matches: query) }
     }
 
+    private var eventResults: [EventShow] {
+        store.events.filter { store.eventShow($0, matches: query) }
+    }
+
     private var pendingResults: [PendingItem] {
         store.pendingItems.filter { store.pendingItem($0, matches: query) }
     }
@@ -456,6 +460,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if eventResults.count > 0 {
+                        section("Events", icon: "calendar.badge.clock") {
+                            ForEach(eventResults) { e in
+                                row(icon: "calendar.badge.clock", color: .purple, title: e.title, subtitle: "\(store.episodes(for: e.id).count) episodes · \(e.subscribed ? "Subscribed" : "Not subscribed")") {
+                                    dismiss()
+                                    onNavigate(.events)
+                                }
+                            }
+                        }
+                    }
                     if pendingResults.count > 0 {
                         section("Pending", icon: "hourglass") {
                             ForEach(pendingResults) { p in
@@ -606,7 +620,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -712,6 +726,8 @@ struct GlobalSearchView: View {
             Text("\(hostedVideoResults.count) videos")
             Text("·")
             Text("\(redditResults.count) posts")
+            Text("·")
+            Text("\(eventResults.count) events")
             Text("·")
             Text("\(pendingResults.count) pending")
             Text("·")

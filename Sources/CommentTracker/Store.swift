@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UserNotifications
+import AVFoundation
 
 @MainActor
 final class Store: ObservableObject {
@@ -73,6 +74,8 @@ final class Store: ObservableObject {
     @Published var redditPosts: [RedditPost] = []
     @Published var redditComments: [RedditComment] = []
     @Published var roadmap: [RoadmapItem] = []
+    @Published var events: [EventShow] = []
+    @Published var eventEpisodes: [EventEpisode] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -102,6 +105,13 @@ final class Store: ObservableObject {
 
     // Floating timer window
     @Published var showFloatingTimer = false
+
+    // Audio playback (Events "listen")
+    private var audioPlayer: AVAudioPlayer?
+    @Published var nowPlayingEpisodeID: Int?
+    @Published var nowPlayingEventID: Int?
+    @Published var isPlaying = false
+    @Published var audioPlaybackTime: TimeInterval = 0
 
     private var timer: Timer?
 
@@ -192,6 +202,8 @@ final class Store: ObservableObject {
         hostedVideoComments = loadHostedVideoComments()
         redditPosts = loadRedditPosts()
         redditComments = loadRedditComments()
+        events = loadEvents()
+        eventEpisodes = loadEventEpisodes()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -1677,6 +1689,12 @@ final class Store: ObservableObject {
             deepWorkSecondsLeft = newValue
             if newValue <= 0 {
                 completeDeepWorkTimer()
+            }
+        }
+        if let player = audioPlayer {
+            audioPlaybackTime = player.currentTime
+            if isPlaying && !player.isPlaying {
+                handlePlaybackFinished()
             }
         }
     }
@@ -4236,6 +4254,216 @@ final class Store: ObservableObject {
         _ = db.execute("DELETE FROM reddit_comments WHERE id = ?", [id])
         _ = db.execute("DELETE FROM reddit_comments WHERE parent_id = ?", [id])
         refresh()
+    }
+
+    // MARK: - Events (subscribe & listen)
+
+    private func loadEvents() -> [EventShow] {
+        db.query("SELECT * FROM events ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let description = row["description"] as? String,
+                let subscribedRaw = row["subscribed"] as? Int,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return EventShow(
+                id: id,
+                title: title,
+                description: description,
+                subscribed: subscribedRaw != 0,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadEventEpisodes() -> [EventEpisode] {
+        db.query("SELECT * FROM event_episodes ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let eventID = row["event_id"] as? Int,
+                let title = row["title"] as? String,
+                let note = row["note"] as? String,
+                let filename = row["filename"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return EventEpisode(
+                id: id,
+                eventId: eventID,
+                title: title,
+                note: note,
+                filename: filename,
+                duration: row["duration"] as? Double ?? 0,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func eventShow(_ e: EventShow, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return e.title.lowercased().contains(q) || e.description.lowercased().contains(q)
+    }
+
+    func episodes(for eventID: Int) -> [EventEpisode] {
+        eventEpisodes.filter { $0.eventId == eventID }.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    @discardableResult
+    func addEvent(title: String, description: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO events (title, description, subscribed, position, created_at, updated_at) VALUES (?, ?, 1, ?, ?, ?)",
+            [trimmed, description, events.count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateEvent(id: Int, title: String, description: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE events SET title = ?, description = ?, updated_at = ? WHERE id = ?",
+            [trimmed, description, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func toggleSubscribed(id: Int) {
+        guard let event = events.first(where: { $0.id == id }) else { return }
+        _ = db.execute(
+            "UPDATE events SET subscribed = ?, updated_at = ? WHERE id = ?",
+            [event.subscribed ? 0 : 1, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveEvent(id: Int, direction: Int) {
+        let sorted = events
+        guard let index = sorted.firstIndex(where: { $0.id == id }) else { return }
+        let targetIndex = index + direction
+        guard targetIndex >= 0 && targetIndex < sorted.count else { return }
+        let other = sorted[targetIndex]
+        _ = db.execute("UPDATE events SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE events SET position = ?, updated_at = ? WHERE id = ?", [sorted[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteEvent(_ id: Int) {
+        let episodeFiles = episodes(for: id)
+        _ = db.execute("DELETE FROM events WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM event_episodes WHERE event_id = ?", [id])
+        for episode in episodeFiles {
+            let file = audioDirectoryURL.appendingPathComponent(episode.filename)
+            try? FileManager.default.removeItem(at: file)
+        }
+        if nowPlayingEventID == id {
+            stopPlayback()
+        }
+        refresh()
+    }
+
+    @discardableResult
+    func addEpisode(eventID: Int, title: String, note: String, from sourceURL: URL) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = Date().timeIntervalSince1970
+        let filename = UUID().uuidString + "." + sourceURL.pathExtension
+        let dest = audioDirectoryURL.appendingPathComponent(filename)
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: dest)
+        } catch {
+            return nil
+        }
+        let duration = durationOfAudio(at: dest)
+        _ = db.execute(
+            "INSERT INTO event_episodes (event_id, title, note, filename, duration, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [eventID, trimmed.isEmpty ? "Untitled episode" : trimmed, note, filename, duration, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateEpisode(id: Int, title: String, note: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE event_episodes SET title = ?, note = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteEpisode(_ id: Int) {
+        guard let episode = eventEpisodes.first(where: { $0.id == id }) else { return }
+        let file = audioDirectoryURL.appendingPathComponent(episode.filename)
+        try? FileManager.default.removeItem(at: file)
+        _ = db.execute("DELETE FROM event_episodes WHERE id = ?", [id])
+        if nowPlayingEpisodeID == id {
+            stopPlayback()
+        }
+        refresh()
+    }
+
+    private func durationOfAudio(at url: URL) -> Double {
+        guard let player = try? AVAudioPlayer(contentsOf: url) else { return 0 }
+        return player.duration
+    }
+
+    // MARK: Playback
+
+    func playEpisode(eventID: Int, episodeID: Int) {
+        guard let episode = eventEpisodes.first(where: { $0.id == episodeID }) else { return }
+        let file = audioDirectoryURL.appendingPathComponent(episode.filename)
+        guard let player = try? AVAudioPlayer(contentsOf: file) else { return }
+        stopPlayback()
+        audioPlayer = player
+        audioPlayer?.play()
+        nowPlayingEpisodeID = episodeID
+        nowPlayingEventID = eventID
+        isPlaying = true
+        audioPlaybackTime = 0
+    }
+
+    func handlePlaybackFinished() {
+        audioPlaybackTime = audioPlayer?.duration ?? 0
+        isPlaying = false
+        audioPlayer = nil
+    }
+
+    func togglePlayback() {
+        guard let player = audioPlayer else { return }
+        if player.isPlaying {
+            player.pause()
+            isPlaying = false
+        } else {
+            player.play()
+            isPlaying = true
+        }
+    }
+
+    func seekPlayback(to seconds: TimeInterval) {
+        audioPlayer?.currentTime = seconds
+        audioPlaybackTime = seconds
+    }
+
+    func stopPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        nowPlayingEpisodeID = nil
+        nowPlayingEventID = nil
+        isPlaying = false
+        audioPlaybackTime = 0
     }
 
     private func loadChallengeComments() -> [ChallengeComment] {
