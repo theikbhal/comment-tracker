@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.4.3]
+
+### Fixed
+- 313 Cards grid now scrolls both vertically and horizontally with visible scrollbars, so every card in the deck is reachable.
+
 ## [v1.4.2]
 
 ### Changed

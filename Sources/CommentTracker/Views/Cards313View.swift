@@ -44,18 +44,20 @@ struct Cards313View: View {
             header
             Divider()
             ScrollView(.horizontal, showsIndicators: true) {
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(118), spacing: 8), count: deckColumns),
-                    alignment: .leading,
-                    spacing: 8
-                ) {
-                    ForEach(cards) { card in
-                        Card313Cell(card: card) {
-                            editingCard = card
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.fixed(118), spacing: 8), count: deckColumns),
+                        alignment: .leading,
+                        spacing: 8
+                    ) {
+                        ForEach(cards) { card in
+                            Card313Cell(card: card) {
+                                editingCard = card
+                            }
                         }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
         }
         .sheet(isPresented: $showingAdd) {
