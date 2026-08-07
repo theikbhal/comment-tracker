@@ -12,6 +12,7 @@ struct MiniMindMapView: View {
     @State private var editingText: String = ""
     @State private var renamingMap: MindMap?
     @State private var renamingText: String = ""
+    @FocusState private var editingFieldFocused: Bool
 
     private var selectedMap: MindMap? {
         guard let id = selectedMapID else { return nil }
@@ -136,6 +137,10 @@ struct MiniMindMapView: View {
             selectedMapID = map.id
             selectedNodeID = nil
         }
+        .onTapGesture(count: 2) {
+            renamingText = map.title
+            renamingMap = map
+        }
     }
 
     private func canvas(_ map: MindMap) -> some View {
@@ -170,60 +175,56 @@ struct MiniMindMapView: View {
         .allowsHitTesting(false)
     }
 
+    @ViewBuilder
     private func nodeView(_ node: MindMapNode, mapID: Int) -> some View {
-        let color = mindMapColor(node.color)
-        let isSelected = selectedNodeID == node.id
-        return NodeCardView(
-            node: node,
-            isRoot: node.isRoot,
-            color: color,
-            isSelected: isSelected,
-            onSelect: { selectedNodeID = node.id },
-            onAddChild: { store.addMindMapNode(mapID: mapID, parentID: node.id) },
-            onDelete: { store.deleteMindMapNode(node.id) },
-            onColor: { store.updateMindMapNodeColor(node.id, color: $0) },
-            onEdit: {
-                editingText = node.text
-                editingNodeID = node.id
-            },
-            onMove: { store.moveMindMapNode(node.id, x: $0, y: $1) }
-        )
-        .position(x: node.x, y: node.y)
-        .zIndex(node.isRoot ? 2 : 1)
-        .overlay(alignment: .topTrailing) {
-            if editingNodeID == node.id {
-                editPopover(node)
-            }
+        if editingNodeID == node.id {
+            nodeEditView(node)
+        } else {
+            let color = mindMapColor(node.color)
+            let isSelected = selectedNodeID == node.id
+            NodeCardView(
+                node: node,
+                isRoot: node.isRoot,
+                color: color,
+                isSelected: isSelected,
+                onSelect: { selectedNodeID = node.id },
+                onAddChild: { store.addMindMapNode(mapID: mapID, parentID: node.id) },
+                onDelete: { store.deleteMindMapNode(node.id) },
+                onColor: { store.updateMindMapNodeColor(node.id, color: $0) },
+                onEdit: {
+                    editingText = node.text
+                    editingNodeID = node.id
+                    editingFieldFocused = true
+                },
+                onMove: { store.moveMindMapNode(node.id, x: $0, y: $1) }
+            )
+            .position(x: node.x, y: node.y)
+            .zIndex(node.isRoot ? 2 : 1)
         }
     }
 
-    private func editPopover(_ node: MindMapNode) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextField("Node text", text: $editingText)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 200)
-                .onSubmit {
-                    store.updateMindMapNodeText(node.id, text: editingText)
-                    editingNodeID = nil
-                }
-            HStack(spacing: 6) {
-                ForEach(mindMapColorNames, id: \.self) { name in
-                    Button {
-                        store.updateMindMapNodeColor(node.id, color: name)
-                    } label: {
-                        Circle()
-                            .fill(mindMapColor(name))
-                            .frame(width: 14, height: 14)
-                            .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
+    private func nodeEditView(_ node: MindMapNode) -> some View {
+        let color = mindMapColor(node.color)
+        return TextField("Node text", text: $editingText)
+            .textFieldStyle(.plain)
+            .font(node.isRoot ? .headline : .subheadline)
+            .fontWeight(node.isRoot ? .bold : .semibold)
+            .multilineTextAlignment(.center)
+            .frame(minWidth: 140, maxWidth: 220)
+            .padding(.vertical, node.isRoot ? 10 : 6)
+            .padding(.horizontal, node.isRoot ? 16 : 10)
+            .background(color.opacity(0.2), in: RoundedRectangle(cornerRadius: node.isRoot ? 14 : 10))
+            .overlay(RoundedRectangle(cornerRadius: node.isRoot ? 14 : 10).stroke(color, lineWidth: 2))
+            .focused($editingFieldFocused)
+            .onSubmit {
+                store.updateMindMapNodeText(node.id, text: editingText)
+                editingNodeID = nil
             }
-        }
-        .padding(8)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.25), lineWidth: 1))
-        .offset(x: -12, y: 8)
+            .onExitCommand {
+                editingNodeID = nil
+            }
+            .position(x: node.x, y: node.y)
+            .zIndex(10)
     }
 
     private var emptyState: some View {

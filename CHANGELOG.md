@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.12.1]
+
+### Changed
+- **Mind Map**: node text now edits in place at the node (Enter saves, Esc cancels) instead of a popover. Double-click a map chip to rename it.
+
 ## [v1.12.0]
 
 ### Added
