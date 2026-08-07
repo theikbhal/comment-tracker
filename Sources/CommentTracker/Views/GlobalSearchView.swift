@@ -53,6 +53,10 @@ struct GlobalSearchView: View {
         store.bucks.filter { store.buck($0, matches: query) }
     }
 
+    private var focusResults: [Focus] {
+        store.focusSessions.filter { store.focus($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -90,6 +94,16 @@ struct GlobalSearchView: View {
                                 row(icon: "hammer.fill", color: b.status.color, title: b.title, subtitle: b.status.displayName) {
                                     dismiss()
                                     onNavigate(.bucket)
+                                }
+                            }
+                        }
+                    }
+                    if focusResults.count > 0 {
+                        section("Focus", icon: "scope") {
+                            ForEach(focusResults) { f in
+                                row(icon: "scope", color: .indigo, title: f.text, subtitle: f.isActive ? "Active focus · \(f.startedAt.formatted(date: .abbreviated, time: .omitted))" : "Focus · \(f.startedAt.formatted(date: .abbreviated, time: .omitted))") {
+                                    dismiss()
+                                    onNavigate(.focus)
                                 }
                             }
                         }
@@ -194,7 +208,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -255,6 +269,8 @@ struct GlobalSearchView: View {
             Text("·")
             Text("\(buckResults.count) buckets")
             Text("·")
+            Text("\(focusResults.count) focus")
+            Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
             Text("\(sprintResults.count) sprints")
@@ -311,7 +327,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, trackers, people, videos, thoughts, wins, fails, notes, cards, sprints and links" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, trackers, people, videos, thoughts, wins, fails, notes, cards, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

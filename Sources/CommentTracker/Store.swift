@@ -31,6 +31,7 @@ final class Store: ObservableObject {
     @Published var fails: [Fail] = []
     @Published var interNotes: [InterNote] = []
     @Published var bucks: [Buck] = []
+    @Published var focusSessions: [Focus] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -85,6 +86,7 @@ final class Store: ObservableObject {
         fails = loadFails()
         interNotes = loadInterNotes()
         bucks = loadBucks()
+        focusSessions = loadFocus()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -594,6 +596,44 @@ final class Store: ObservableObject {
 
     func deleteBuck(_ id: Int) {
         _ = db.execute("DELETE FROM bucks WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Focus Tracker
+
+    var currentFocus: Focus? {
+        focusSessions.first { $0.isActive }
+    }
+
+    func focus(_ f: Focus, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return f.text.lowercased().contains(q) || f.note.lowercased().contains(q)
+    }
+
+    func startFocus(text: String, note: String = "") {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, currentFocus == nil else { return }
+        _ = db.execute(
+            "INSERT INTO focus (text, note, started_at, ended_at) VALUES (?, ?, ?, NULL)",
+            [trimmed, note, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func endFocus() {
+        guard let f = currentFocus else { return }
+        _ = db.execute("UPDATE focus SET ended_at = ? WHERE id = ?", [Date().timeIntervalSince1970, f.id])
+        refresh()
+    }
+
+    func updateFocusNote(_ id: Int, note: String) {
+        _ = db.execute("UPDATE focus SET note = ? WHERE id = ?", [note, id])
+        refresh()
+    }
+
+    func deleteFocus(_ id: Int) {
+        _ = db.execute("DELETE FROM focus WHERE id = ?", [id])
         refresh()
     }
 
@@ -1390,6 +1430,19 @@ final class Store: ObservableObject {
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated)
             )
+        }
+    }
+
+    private func loadFocus() -> [Focus] {
+        db.query("SELECT * FROM focus ORDER BY started_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let note = row["note"] as? String,
+                let started = row["started_at"] as? Double
+            else { return nil }
+            let ended = (row["ended_at"] as? Double).map { Date(timeIntervalSince1970: $0) }
+            return Focus(id: id, text: text, note: note, startedAt: Date(timeIntervalSince1970: started), endedAt: ended)
         }
     }
 

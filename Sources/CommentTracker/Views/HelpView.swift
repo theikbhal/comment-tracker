@@ -25,6 +25,7 @@ struct HelpView: View {
                 subGoalCard
                 peopleGoalCard
                 buckCard
+                focusCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -146,6 +147,17 @@ struct HelpView: View {
             Label("Buck Track — what we're working on", systemImage: "hammer.fill")
                 .font(.headline)
             Text("A three-column board: In Flight, On Hold, Done. Everything you're working on lives here. Add it at the top, drag cards between columns (or use right-click), and keep notes on each bucket.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var focusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Focus — one thing at a time", systemImage: "scope")
+                .font(.headline)
+            Text("Pick a single current focus and the app holds the timer while you work. End it when done; every session is saved to your history with a duration and optional note, so you can look back at where attention actually went.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

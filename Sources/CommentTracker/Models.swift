@@ -426,6 +426,19 @@ struct Buck: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Focus (what I'm focused on right now)
+
+struct Focus: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var note: String
+    var startedAt: Date
+    var endedAt: Date?
+    var isActive: Bool {
+        endedAt == nil
+    }
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

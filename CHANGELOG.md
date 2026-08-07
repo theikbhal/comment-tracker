@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.6.1]
+
+### Added
+- New **Focus** tab: a single "current focus" anchor. Start a session on one thing, watch a live timer while you focus, add a note, and end it when done. Every session is saved to history with duration so you can see where attention actually went.
+
 ## [v1.6.0]
 
 ### Added
