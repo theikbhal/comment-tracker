@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.17.0]
+
+### Added
+- **Roadmap** tab: plan big work in Planned / In Progress / Done / Deferred columns. Each item has a quarter label, a priority (high/medium/low), and a markdown note with clickable links. Move items between columns via the arrows menu. Search via ⌘K.
+
 ## [v1.16.0]
 
 ### Added

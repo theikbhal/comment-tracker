@@ -831,6 +831,73 @@ struct Challenge: Identifiable, Equatable {
     }
 }
 
+// MARK: - Roadmap
+
+enum RoadmapStatus: String, CaseIterable, Identifiable {
+    case planned, inProgress, done, deferred
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .planned: return "Planned"
+        case .inProgress: return "In Progress"
+        case .done: return "Done"
+        case .deferred: return "Deferred"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .planned: return .blue
+        case .inProgress: return .orange
+        case .done: return .green
+        case .deferred: return .gray
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .planned: return "calendar.badge.plus"
+        case .inProgress: return "hammer.fill"
+        case .done: return "checkmark.seal.fill"
+        case .deferred: return "pause.fill"
+        }
+    }
+}
+
+enum RoadmapPriority: String, CaseIterable, Identifiable {
+    case high, medium, low
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .high: return "High"
+        case .medium: return "Medium"
+        case .low: return "Low"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .high: return .red
+        case .medium: return .orange
+        case .low: return .green
+        }
+    }
+}
+
+struct RoadmapItem: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var body: String
+    var status: RoadmapStatus
+    var quarter: String
+    var priority: RoadmapPriority
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

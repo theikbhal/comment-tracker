@@ -117,6 +117,10 @@ struct GlobalSearchView: View {
         store.challenges.filter { store.challenge($0, matches: query) }
     }
 
+    private var roadmapResults: [RoadmapItem] {
+        store.roadmap.filter { store.roadmapItem($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -310,6 +314,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if roadmapResults.count > 0 {
+                        section("Roadmap", icon: "map.fill") {
+                            ForEach(roadmapResults) { r in
+                                row(icon: "map.fill", color: r.priority.color, title: r.title, subtitle: "\(r.status.displayName)\(r.quarter.isEmpty ? "" : " · \(r.quarter)")") {
+                                    dismiss()
+                                    onNavigate(.roadmap)
+                                }
+                            }
+                        }
+                    }
                     if trackerResults.count > 0 {
                         section("Trackers", icon: "checklist") {
                             ForEach(trackerResults) { t in
@@ -410,7 +424,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -498,6 +512,8 @@ struct GlobalSearchView: View {
             Text("\(weekResults.count) weeks")
             Text("·")
             Text("\(challengeResults.count) challenges")
+            Text("·")
+            Text("\(roadmapResults.count) roadmap")
             Text("·")
             Text("\(cardResults.count) cards")
             Text("·")

@@ -49,6 +49,7 @@ final class Store: ObservableObject {
     @Published var weekCards: [WeekCard] = []
     @Published var audioNotes: [AudioNote] = []
     @Published var challenges: [Challenge] = []
+    @Published var roadmap: [RoadmapItem] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -124,6 +125,7 @@ final class Store: ObservableObject {
         weekCards = loadWeekCards()
         audioNotes = loadAudioNotes()
         challenges = loadChallenges()
+        roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -2662,6 +2664,84 @@ final class Store: ObservableObject {
 
     func deleteChallenge(_ id: Int) {
         _ = db.execute("DELETE FROM challenges WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Roadmap
+
+    private func loadRoadmap() -> [RoadmapItem] {
+        db.query("SELECT * FROM roadmap_items ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let body = row["body"] as? String,
+                let statusRaw = row["status"] as? String,
+                let status = RoadmapStatus(rawValue: statusRaw),
+                let priorityRaw = row["priority"] as? String,
+                let priority = RoadmapPriority(rawValue: priorityRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return RoadmapItem(
+                id: id,
+                title: title,
+                body: body,
+                status: status,
+                quarter: row["quarter"] as? String ?? "",
+                priority: priority,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    func roadmapItem(_ r: RoadmapItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return r.title.lowercased().contains(q) || r.body.lowercased().contains(q) || r.quarter.lowercased().contains(q)
+    }
+
+    func roadmapItems(for status: RoadmapStatus) -> [RoadmapItem] {
+        roadmap.filter { $0.status == status }
+    }
+
+    @discardableResult
+    func addRoadmapItem(title: String, body: String, status: RoadmapStatus, quarter: String, priority: RoadmapPriority) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (roadmap.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO roadmap_items (title, body, status, quarter, priority, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, body, status.rawValue, quarter, priority.rawValue, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateRoadmapItem(id: Int, title: String, body: String, quarter: String, priority: RoadmapPriority) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE roadmap_items SET title = ?, body = ?, quarter = ?, priority = ?, updated_at = ? WHERE id = ?",
+            [trimmed, body, quarter, priority.rawValue, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func setRoadmapStatus(id: Int, status: RoadmapStatus) {
+        _ = db.execute(
+            "UPDATE roadmap_items SET status = ?, position = ?, updated_at = ? WHERE id = ?",
+            [status.rawValue, (roadmap.map(\.position).max() ?? 0) + 1, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteRoadmapItem(_ id: Int) {
+        _ = db.execute("DELETE FROM roadmap_items WHERE id = ?", [id])
         refresh()
     }
 

@@ -39,6 +39,7 @@ struct HelpView: View {
                 yearCard
                 weekCard
                 challengeCard
+                roadmapFeatureCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -314,6 +315,17 @@ struct HelpView: View {
             Label("Challenges — personal quests", systemImage: "bolt.fill")
                 .font(.headline)
             Text("Track any challenge (30-day streaks, no-sugar month, etc.) across Active / Completed / Archived columns. Each challenge has optional start/end dates and a markdown note with clickable links. Move a challenge between columns via the arrows menu.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var roadmapFeatureCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Roadmap — plan across quarters", systemImage: "map.fill")
+                .font(.headline)
+            Text("Plan big work in Planned / In Progress / Done / Deferred columns. Each item has a quarter label, a priority (high/medium/low), and a markdown note with clickable links. Move items between columns via the arrows menu.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
