@@ -28,6 +28,7 @@ struct HelpView: View {
                 focusCard
                 parallelCard
                 projectCard
+                deepWorkCard
                 howToCard
                 trackerCard
                 thoughtsCard
@@ -182,6 +183,17 @@ struct HelpView: View {
             Label("Projects — track what you're working on", systemImage: "shippingbox.fill")
                 .font(.headline)
             Text("Each project has a status: Working (the one, single current focus), In Progress, or Completed. Hit Start to make it the active project, Stop to drop it back. Store a \"how to start\" and a \"how to stop\" note on each project so switching in and out is easy.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var deepWorkCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Deep Work — a dedicated block", systemImage: "brain.head.profile")
+                .font(.headline)
+            Text("A single focus timer for longer blocks (15–120 min). Phones down, one thing. When a block completes, a Win is logged automatically so your progress is recorded.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

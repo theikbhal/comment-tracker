@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.7.0]
+
+### Added
+- New **Deep Work** tab: a single focus timer for 15–120 min blocks with a live progress ring, pause/reset, sound on completion, daily minutes + history. Completing a block automatically logs a Win.
+
 ## [v1.6.3]
 
 ### Added

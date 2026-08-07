@@ -34,6 +34,7 @@ final class Store: ObservableObject {
     @Published var focusSessions: [Focus] = []
     @Published var parallel: [ParallelItem] = []
     @Published var projects: [Project] = []
+    @Published var deepWork: [DeepWorkSession] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -91,6 +92,7 @@ final class Store: ObservableObject {
         focusSessions = loadFocus()
         parallel = loadParallel()
         projects = loadProjects()
+        deepWork = loadDeepWork()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -725,6 +727,34 @@ final class Store: ObservableObject {
 
     func deleteProject(_ id: Int) {
         _ = db.execute("DELETE FROM projects WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Deep Work
+
+    func deepWork(_ s: DeepWorkSession, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return query.lowercased().contains("deep") || query.lowercased().contains("work") || String(s.minutes).contains(query.lowercased())
+    }
+
+    var deepWorkMinutesToday: Int {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        return deepWork.filter { $0.startedAt >= start }.reduce(0) { $0 + $1.minutes }
+    }
+
+    func completeDeepWork(minutes: Int) {
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO deepwork_sessions (minutes, started_at, ended_at, completed) VALUES (?, ?, ?, 1)",
+            [minutes, now - Double(minutes) * 60, now]
+        )
+        refresh()
+        addWin(text: "Completed a \(minutes)-minute deep work block")
+    }
+
+    func deleteDeepWork(_ id: Int) {
+        _ = db.execute("DELETE FROM deepwork_sessions WHERE id = ?", [id])
         refresh()
     }
 
@@ -1570,6 +1600,25 @@ final class Store: ObservableObject {
                 stopNote: stopNote,
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadDeepWork() -> [DeepWorkSession] {
+        db.query("SELECT * FROM deepwork_sessions ORDER BY started_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let minutes = row["minutes"] as? Int,
+                let started = row["started_at"] as? Double,
+                let ended = row["ended_at"] as? Double,
+                let completed = row["completed"] as? Int
+            else { return nil }
+            return DeepWorkSession(
+                id: id,
+                minutes: minutes,
+                startedAt: Date(timeIntervalSince1970: started),
+                endedAt: Date(timeIntervalSince1970: ended),
+                completed: completed == 1
             )
         }
     }

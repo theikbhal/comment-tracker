@@ -143,6 +143,13 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS deepwork_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            minutes INTEGER NOT NULL,
+            started_at REAL NOT NULL,
+            ended_at REAL NOT NULL,
+            completed INTEGER NOT NULL DEFAULT 0
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

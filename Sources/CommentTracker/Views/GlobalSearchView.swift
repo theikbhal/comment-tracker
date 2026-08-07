@@ -65,6 +65,10 @@ struct GlobalSearchView: View {
         store.projects.filter { store.project($0, matches: query) }
     }
 
+    private var deepWorkResults: [DeepWorkSession] {
+        store.deepWork.filter { store.deepWork($0, matches: query) }
+    }
+
     private var cardResults: [WordCard] {
         store.cards.filter { store.card($0, matches: query) }
     }
@@ -132,6 +136,16 @@ struct GlobalSearchView: View {
                                 row(icon: "shippingbox.fill", color: pr.status.color, title: pr.name, subtitle: "Project · \(pr.status.displayName)") {
                                     dismiss()
                                     onNavigate(.projects)
+                                }
+                            }
+                        }
+                    }
+                    if deepWorkResults.count > 0 {
+                        section("Deep Work", icon: "brain.head.profile") {
+                            ForEach(deepWorkResults) { d in
+                                row(icon: "brain.head.profile", color: .indigo, title: "\(d.minutes)-min block", subtitle: d.completed ? "Completed deep work · \(d.startedAt.formatted(date: .abbreviated, time: .omitted))" : "Deep work · \(d.startedAt.formatted(date: .abbreviated, time: .omitted))") {
+                                    dismiss()
+                                    onNavigate(.deepwork)
                                 }
                             }
                         }
@@ -236,7 +250,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && projectResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -303,6 +317,8 @@ struct GlobalSearchView: View {
             Text("·")
             Text("\(projectResults.count) projects")
             Text("·")
+            Text("\(deepWorkResults.count) deep work")
+            Text("·")
             Text("\(cardResults.count) cards")
             Text("·")
             Text("\(sprintResults.count) sprints")
@@ -359,7 +375,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, projects, trackers, people, videos, thoughts, wins, fails, notes, cards, sprints and links" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search tabs, buckets, focus, parallel, projects, trackers, people, videos, thoughts, wins, fails, notes, cards, deep work, sprints and links" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

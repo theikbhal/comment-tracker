@@ -498,6 +498,18 @@ struct Project: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Deep Work sessions
+
+struct DeepWorkSession: Identifiable, Equatable {
+    let id: Int
+    var minutes: Int
+    var startedAt: Date
+    var endedAt: Date
+    var completed: Bool
+}
+
+let deepWorkPresets: [Int] = [15, 30, 45, 60, 90, 120]
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {
