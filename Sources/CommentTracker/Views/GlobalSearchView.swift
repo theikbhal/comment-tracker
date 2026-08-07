@@ -33,6 +33,10 @@ struct GlobalSearchView: View {
         store.videos.filter { store.video($0, matches: query) }
     }
 
+    private var thoughtResults: [Thought] {
+        store.thoughts.filter { store.thought($0, matches: query) }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             searchBar
@@ -82,7 +86,17 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty) {
+                    if thoughtResults.count > 0 {
+                        section("Thoughts", icon: "lightbulb") {
+                            ForEach(thoughtResults) { th in
+                                row(icon: "lightbulb", color: th.list.color, title: th.title, subtitle: th.list.displayName) {
+                                    dismiss()
+                                    onNavigate(.thoughts)
+                                }
+                            }
+                        }
+                    }
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -132,6 +146,8 @@ struct GlobalSearchView: View {
             Text("\(personResults.count) people")
             Text("·")
             Text("\(videoResults.count) videos")
+            Text("·")
+            Text("\(thoughtResults.count) thoughts")
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -185,7 +201,7 @@ struct GlobalSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30))
                 .foregroundStyle(.tertiary)
-            Text(trimmedQuery.isEmpty ? "Type to search trackers, people, videos and tabs" : "No results")
+            Text(trimmedQuery.isEmpty ? "Type to search trackers, people, videos, thoughts and tabs" : "No results")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

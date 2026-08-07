@@ -25,6 +25,8 @@ final class Store: ObservableObject {
     @Published var videoComments: [VideoComment] = []
     @Published var videoToDetail: Video?
 
+    @Published var thoughts: [Thought] = []
+
     @Published var trackers: [Tracker] = []
     @Published var trackerEntries: [TrackerEntry] = []
     @Published var trackerToDetail: Tracker?
@@ -65,6 +67,7 @@ final class Store: ObservableObject {
         peopleComments = loadPersonComments()
         videos = loadVideos()
         videoComments = loadVideoComments()
+        thoughts = loadThoughts()
         trackers = loadTrackers()
         trackerEntries = loadTrackerEntries()
     }
@@ -347,6 +350,102 @@ final class Store: ObservableObject {
             [videoID, trimmed, Date().timeIntervalSince1970]
         )
         refresh()
+    }
+
+    // MARK: - Thoughts
+
+    func thoughtsForList(_ list: ThoughtList) -> [Thought] {
+        thoughts
+            .filter { $0.list == list }
+            .sorted { $0.position < $1.position }
+    }
+
+    func thoughtByID(_ id: Int) -> Thought? {
+        thoughts.first { $0.id == id }
+    }
+
+    func thought(_ t: Thought, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if t.title.lowercased().contains(q) { return true }
+        if t.note.lowercased().contains(q) { return true }
+        return false
+    }
+
+    func addThought(title: String, note: String = "", list: ThoughtList = .longTerm) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        let position = thoughtsForList(list).count
+        _ = db.execute(
+            "INSERT INTO thoughts (title, note, list, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed, note, list.rawValue, position, now, now]
+        )
+        refresh()
+    }
+
+    func addThoughts(_ titles: [String], list: ThoughtList) {
+        let parsed = titles
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !parsed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        var position = thoughtsForList(list).count
+        for title in parsed {
+            _ = db.execute(
+                "INSERT INTO thoughts (title, note, list, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                [title, "", list.rawValue, position, now, now]
+            )
+            position += 1
+        }
+        refresh()
+    }
+
+    func updateThought(id: Int, title: String? = nil, note: String? = nil, list: ThoughtList? = nil) {
+        guard let t = thoughtByID(id) else { return }
+        let newList = list ?? t.list
+        _ = db.execute(
+            "UPDATE thoughts SET title = ?, note = ?, list = ?, updated_at = ? WHERE id = ?",
+            [title ?? t.title, note ?? t.note, newList.rawValue, Date().timeIntervalSince1970, id]
+        )
+        if let list, list != t.list {
+            reindexThoughtList(t.list)
+            reindexThoughtList(list)
+        }
+        refresh()
+    }
+
+    func deleteThought(_ id: Int) {
+        _ = db.execute("DELETE FROM thoughts WHERE id = ?", [id])
+        refresh()
+    }
+
+    func moveThought(_ id: Int, to list: ThoughtList, at index: Int) {
+        guard let t = thoughtByID(id) else { return }
+        let fromList = t.list
+        var target = thoughtsForList(list)
+        target.removeAll { $0.id == id }
+        let clamped = max(0, min(index, target.count))
+        target.insert(t, at: clamped)
+        writeThoughtOrder(target, list: list)
+        if fromList != list {
+            writeThoughtOrder(thoughtsForList(fromList).filter { $0.id != id }, list: fromList)
+        }
+        refresh()
+    }
+
+    func reindexThoughtList(_ list: ThoughtList) {
+        writeThoughtOrder(thoughtsForList(list), list: list)
+    }
+
+    private func writeThoughtOrder(_ ordered: [Thought], list: ThoughtList) {
+        for (i, thought) in ordered.enumerated() {
+            _ = db.execute("UPDATE thoughts SET position = ?, updated_at = ? WHERE id = ?", [i, Date().timeIntervalSince1970, thought.id])
+        }
+    }
+
+    func randomActiveThought() -> Thought? {
+        thoughts.isEmpty ? nil : thoughts.randomElement()
     }
 
     // MARK: - Trackers
@@ -698,6 +797,28 @@ final class Store: ObservableObject {
                 personId: personID,
                 body: body,
                 createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadThoughts() -> [Thought] {
+        db.query("SELECT * FROM thoughts ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let listRaw = row["list"] as? String,
+                let list = ThoughtList(rawValue: listRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Thought(
+                id: id,
+                title: title,
+                note: row["note"] as? String ?? "",
+                list: list,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
             )
         }
     }

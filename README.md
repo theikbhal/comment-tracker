@@ -22,6 +22,7 @@ Built with **Swift + SwiftUI + SQLite**. No network calls. Your data stays on yo
 - **Tracker (daily routines)** — checkboxes and counters with monthly calendar views and notes: **Namaz (5)**, **Quran (1 para)**, **Zikr** (morning/evening, 1000 darood, 1000 astaghfar), **Dua**, **Fasting** (Ramadan + Thursdays), **Jamaat** (3/month · 40/year · Sunday night), **Masjid**, **Family/Wife**, **Parents**, **Relatives**, **Parenting**, **Friends**, **Health** (steps, diet), **Business** (app build, content, sales, automation)
 - **Enable/disable any tracker** in Manage; add custom trackers with your own icon, color and target
 - **Global search (⌘K)** — search across tabs, trackers, people and videos
+- **Thoughts board (Trello-style)** — Long-term / This week / Doing lists; add one or a whole batch (one per line), drag to reorder, and hit **"Pick for me"** to let the dice choose when you can't decide
 - **Local SQLite storage** — nothing leaves the machine
 - **First-run onboarding**, Help screen with settings, and keyboard shortcuts
 - Custom app icon

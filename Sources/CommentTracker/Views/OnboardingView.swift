@@ -238,6 +238,8 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Every tracker has a calendar view with notes. Turn any on or off in Manage.")
                     .font(.caption)
+                Text("Thoughts keeps your good ideas in a Trello board — hit “Pick for me” when stuck.")
+                    .font(.caption)
                 Text("Press ⌘K to search everything in the app.")
                     .font(.caption)
             }

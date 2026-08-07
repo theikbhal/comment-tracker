@@ -316,6 +316,50 @@ struct VideoComment: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - Thoughts (priority board)
+
+enum ThoughtList: String, CaseIterable, Identifiable {
+    case longTerm = "longterm"
+    case thisWeek = "thisweek"
+    case doing = "doing"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .longTerm: return "Long-term"
+        case .thisWeek: return "This week"
+        case .doing: return "Doing"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .longTerm: return "calendar.badge.clock"
+        case .thisWeek: return "calendar"
+        case .doing: return "bolt.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .longTerm: return .purple
+        case .thisWeek: return .teal
+        case .doing: return .orange
+        }
+    }
+}
+
+struct Thought: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var note: String
+    var list: ThoughtList
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Trackers (daily life routines)
 
 func dayString(_ date: Date) -> String {

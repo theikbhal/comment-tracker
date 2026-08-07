@@ -23,6 +23,7 @@ struct HelpView: View {
                 peopleGoalCard
                 howToCard
                 trackerCard
+                thoughtsCard
                 videosCard
                 searchCard
                 shortcutsCard
@@ -172,6 +173,25 @@ struct HelpView: View {
             Text("Press ⌘K to search across tabs, trackers, people and videos. Type, then click (or Enter) to jump straight to the item.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var thoughtsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Thoughts — don't lose an idea", systemImage: "lightbulb")
+                .font(.headline)
+            Text("A Trello-style board with three lists — Long-term, This week, Doing. Add thoughts one at a time or paste a batch (one per line), drag them to reorder or move between lists.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("• “Pick for me” (🎲) chooses a random thought when you can’t decide")
+                    .font(.caption)
+                Text("• “Start doing” moves a thought to the Doing list")
+                    .font(.caption)
+            }
+            .padding(10)
+            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
         }
         .card()
     }

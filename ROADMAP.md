@@ -12,6 +12,7 @@
 - [x] Search across People and Videos
 - [x] Tracker (daily routines): Namaz/Quran/Zikr/Fasting/Jamaat/Family/Health/Business — checkboxes + counters, monthly calendar + notes, enable/disable, custom trackers
 - [x] Global ⌘K search across tabs, trackers, people, videos
+- [x] Thoughts board: three lists, single + bulk add (one per line), drag to reorder, "Pick for me" randomizer
 - [x] Onboarding + Help with settings
 - [x] Local SQLite storage
 - [x] App icon + bundle
