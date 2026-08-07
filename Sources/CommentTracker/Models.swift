@@ -522,6 +522,16 @@ struct ScheduleEntry: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Holding Hand (parking lot, wins-style)
+
+struct HoldingItem: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var bookmarked: Bool
+    var done: Bool
+    var createdAt: Date
+}
+
 // MARK: - Links (simple bookmark list)
 
 struct LinkItem: Identifiable, Equatable {

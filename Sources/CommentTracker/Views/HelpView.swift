@@ -27,6 +27,7 @@ struct HelpView: View {
                 buckCard
                 focusCard
                 parallelCard
+                holdingCard
                 projectCard
                 deepWorkCard
                 scheduleCard
@@ -173,6 +174,17 @@ struct HelpView: View {
             Label("Parallel — 3 threads + a catch-all", systemImage: "square.split.3x1")
                 .font(.headline)
             Text("Keep three things running side by side (Thing 1 / 2 / 3) plus an Unorganized bucket for everything that doesn't fit yet. Drag items between lanes or use right-click to move them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var holdingCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Holding Hand — a parking lot", systemImage: "hand.raised.fill")
+                .font(.headline)
+            Text("A Wins-style feed for things you don't want to lose but aren't ready to organize. Type it and hit Hold it; each item is timestamped. Filter by Open or Bookmarked, release an item when it's handled, delete from right-click.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

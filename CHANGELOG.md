@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.8.0]
+
+### Added
+- New **Holding Hand** tab: a Wins-style parking lot for things you don't want to lose but aren't ready to organize. Compose, hold, timestamped feed, Open/Bookmarked filters, release items when handled, delete via right-click. Searchable via ⌘K.
+
 ## [v1.7.1]
 
 ### Added

@@ -158,6 +158,13 @@ final class DatabaseManager {
             updated_at REAL NOT NULL,
             UNIQUE(day, slot)
         );
+        CREATE TABLE IF NOT EXISTS holding (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            bookmarked INTEGER NOT NULL DEFAULT 0,
+            done INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

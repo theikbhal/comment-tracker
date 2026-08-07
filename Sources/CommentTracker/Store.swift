@@ -36,6 +36,7 @@ final class Store: ObservableObject {
     @Published var projects: [Project] = []
     @Published var deepWork: [DeepWorkSession] = []
     @Published var schedule: [ScheduleEntry] = []
+    @Published var holding: [HoldingItem] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -95,6 +96,7 @@ final class Store: ObservableObject {
         projects = loadProjects()
         deepWork = loadDeepWork()
         schedule = loadSchedule()
+        holding = loadHolding()
         links = loadLinks()
         cards = loadCards()
         pomodoros = loadPomodoros()
@@ -787,6 +789,44 @@ final class Store: ObservableObject {
     func schedule(_ e: ScheduleEntry, matches query: String) -> Bool {
         guard !query.isEmpty else { return true }
         return e.task.lowercased().contains(query.lowercased())
+    }
+
+    // MARK: - Holding Hand
+
+    func holdingItem(_ h: HoldingItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return h.text.lowercased().contains(query.lowercased())
+    }
+
+    func addHolding(text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO holding (text, bookmarked, done, created_at) VALUES (?, 0, 0, ?)",
+            [trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteHolding(_ id: Int) {
+        _ = db.execute("DELETE FROM holding WHERE id = ?", [id])
+        refresh()
+    }
+
+    func toggleHoldingBookmark(_ id: Int) -> Bool {
+        guard let h = holding.first(where: { $0.id == id }) else { return false }
+        let newValue = h.bookmarked ? 0 : 1
+        _ = db.execute("UPDATE holding SET bookmarked = ? WHERE id = ?", [newValue, id])
+        refresh()
+        return newValue == 1
+    }
+
+    func toggleHoldingDone(_ id: Int) -> Bool {
+        guard let h = holding.first(where: { $0.id == id }) else { return false }
+        let newValue = h.done ? 0 : 1
+        _ = db.execute("UPDATE holding SET done = ? WHERE id = ?", [newValue, id])
+        refresh()
+        return newValue == 1
     }
 
     // MARK: - Backup & Restore
@@ -1664,6 +1704,23 @@ final class Store: ObservableObject {
                 let updated = row["updated_at"] as? Double
             else { return nil }
             return ScheduleEntry(id: id, day: day, slot: slot, task: task, updatedAt: Date(timeIntervalSince1970: updated))
+        }
+    }
+
+    private func loadHolding() -> [HoldingItem] {
+        db.query("SELECT * FROM holding ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return HoldingItem(
+                id: id,
+                text: text,
+                bookmarked: (row["bookmarked"] as? Int ?? 0) == 1,
+                done: (row["done"] as? Int ?? 0) == 1,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
         }
     }
 
