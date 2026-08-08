@@ -1450,6 +1450,27 @@ struct WordCard: Identifiable, Equatable {
     var col: Int { max(1, (slot - 1) % deckColumns + 1) }
 }
 
+// MARK: - 2000 Cards (Excel-style 40x50 deck)
+
+struct BigCard: Identifiable, Equatable {
+    let id: Int
+    var slot: Int
+    var word: String
+    var groupName: String
+    var words: [String]
+    var link: String
+    var createdAt: Date
+    var updatedAt: Date
+
+    var wordsText: String {
+        words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " | ")
+    }
+
+    var deckColumns: Int { 40 }
+    var row: Int { max(1, (slot - 1) / deckColumns + 1) }
+    var col: Int { max(1, (slot - 1) % deckColumns + 1) }
+}
+
 // MARK: - Stacks (push / pop)
 
 let stackColorOptions = ["gray", "blue", "indigo", "purple", "pink", "red", "orange", "yellow", "green", "teal"]

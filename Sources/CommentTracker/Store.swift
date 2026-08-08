@@ -90,6 +90,7 @@ final class Store: ObservableObject {
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
+    @Published var bigCards: [BigCard] = []
     @Published var stacks: [Stack] = []
     @Published var stackItems: [StackItem] = []
     @Published var stackComments: [StackComment] = []
@@ -252,6 +253,7 @@ final class Store: ObservableObject {
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
+        bigCards = loadBigCards()
         stacks = loadStacks()
         stackItems = loadStackItems()
         stackComments = loadStackComments()
@@ -1854,6 +1856,128 @@ final class Store: ObservableObject {
         return added
     }
 
+    // MARK: - 2000 Cards (Excel-style deck)
+
+    func bigCard(_ c: BigCard, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if c.word.lowercased().contains(q) { return true }
+        if c.groupName.lowercased().contains(q) { return true }
+        if c.wordsText.lowercased().contains(q) { return true }
+        return false
+    }
+
+    func addBigCard(word: String, group: String = "", words: [String] = [], link: String = "") {
+        let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        let slot = (bigCards.map(\.slot).max() ?? 0) + 1
+        let wordsText = words.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "|")
+        _ = db.execute(
+            "INSERT INTO bigcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [slot, trimmed, group.trimmingCharacters(in: .whitespacesAndNewlines), wordsText, link, now, now]
+        )
+        refresh()
+    }
+
+    func updateBigCard(id: Int, word: String? = nil, group: String? = nil, words: [String]? = nil, link: String? = nil) {
+        guard let c = bigCards.first(where: { $0.id == id }) else { return }
+        let wordsText = (words ?? c.words).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "|")
+        _ = db.execute(
+            "UPDATE bigcards SET word = ?, group_name = ?, words = ?, link = ?, updated_at = ? WHERE id = ?",
+            [word ?? c.word, group ?? c.groupName, wordsText, link ?? c.link, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteBigCard(_ id: Int) {
+        _ = db.execute("DELETE FROM bigcards WHERE id = ?", [id])
+        refresh()
+    }
+
+    func addAllEmptyBigCards(target: Int = 2000) -> Int {
+        let nextSlot = (bigCards.map(\.slot).max() ?? 0) + 1
+        let toAdd = max(0, target - (nextSlot - 1))
+        if toAdd == 0 { return 0 }
+        let now = Date().timeIntervalSince1970
+        for i in 0..<toAdd {
+            _ = db.execute(
+                "INSERT INTO bigcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [nextSlot + i, "", "Empty", "", "", now, now]
+            )
+        }
+        refresh()
+        return toAdd
+    }
+
+    func resetBigDeck(target: Int = 2000) {
+        _ = db.execute("DELETE FROM bigcards")
+        let now = Date().timeIntervalSince1970
+        for i in 0..<max(0, target) {
+            _ = db.execute(
+                "INSERT INTO bigcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [i + 1, "", "Empty", "", "", now, now]
+            )
+        }
+        refresh()
+    }
+
+    var bigTotalEmptySlots: Int {
+        bigCards.filter { $0.word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+    }
+
+    var bigCardGroups: [String] {
+        var seen: [String] = []
+        for c in bigCards {
+            let g = c.groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !g.isEmpty && !seen.contains(g) { seen.append(g) }
+        }
+        return seen
+    }
+
+    func exportBigCards() -> String? {
+        struct BigCardDTO: Codable {
+            let slot: Int
+            let word: String
+            var group: String
+            var words: [String]
+            var link: String
+        }
+        let dtos = bigCards.sorted(by: { $0.slot < $1.slot }).map { BigCardDTO(slot: $0.slot, word: $0.word, group: $0.groupName, words: $0.words, link: $0.link) }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(dtos) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    func importBigCards(fromJSON text: String) -> Int {
+        guard let data = text.data(using: .utf8) else { return 0 }
+        struct BigCardDTO: Decodable {
+            let word: String
+            var slot: Int?
+            var group: String?
+            var words: [String]?
+            var link: String?
+        }
+        guard let dtos = try? JSONDecoder().decode([BigCardDTO].self, from: data) else { return 0 }
+        var added = 0
+        let now = Date().timeIntervalSince1970
+        var nextSlot = (bigCards.map(\.slot).max() ?? 0) + 1
+        for d in dtos {
+            let w = d.word.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !w.isEmpty else { continue }
+            let slot = d.slot ?? nextSlot
+            if slot >= nextSlot { nextSlot = slot + 1 }
+            _ = db.execute(
+                "INSERT INTO bigcards (slot, word, group_name, words, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [slot, w, d.group ?? "", (d.words ?? []).joined(separator: "|"), d.link ?? "", now, now]
+            )
+            added += 1
+        }
+        if added > 0 { refresh() }
+        return added
+    }
+
     // MARK: - Stacks (push / pop)
 
     func uncategorizedStack() -> Stack? {
@@ -2688,6 +2812,22 @@ final class Store: ObservableObject {
         db.query("SELECT * FROM wordcards ORDER BY slot ASC, created_at ASC").compactMap { row in
             guard let id = row["id"] as? Int, let word = row["word"] as? String, let created = row["created_at"] as? Double else { return nil }
             return WordCard(
+                id: id,
+                slot: row["slot"] as? Int ?? 0,
+                word: word,
+                groupName: row["group_name"] as? String ?? "",
+                words: (row["words"] as? String ?? "").split(separator: "|").map(String.init),
+                link: row["link"] as? String ?? "",
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadBigCards() -> [BigCard] {
+        db.query("SELECT * FROM bigcards ORDER BY slot ASC, created_at ASC").compactMap { row in
+            guard let id = row["id"] as? Int, let word = row["word"] as? String, let created = row["created_at"] as? Double else { return nil }
+            return BigCard(
                 id: id,
                 slot: row["slot"] as? Int ?? 0,
                 word: word,

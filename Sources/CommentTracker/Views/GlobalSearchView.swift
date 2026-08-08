@@ -197,6 +197,10 @@ struct GlobalSearchView: View {
         store.cards.filter { store.card($0, matches: query) }
     }
 
+    private var bigCardResults: [BigCard] {
+        store.bigCards.filter { store.bigCard($0, matches: query) }
+    }
+
     private var stackResults: [StackItem] {
         store.stackItems.filter { store.stackItem($0, matches: query) }
     }
@@ -664,6 +668,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if bigCardResults.count > 0 {
+                        section("2000 Cards", icon: "tablecells.fill") {
+                            ForEach(bigCardResults) { c in
+                                row(icon: "tablecells.fill", color: .teal, title: c.word, subtitle: c.groupName.isEmpty ? "2000 Cards" : c.groupName) {
+                                    dismiss()
+                                    onNavigate(.bigcards)
+                                }
+                            }
+                        }
+                    }
                     if stackResults.count > 0 {
                         section("Stacks", icon: "rectangle.stack.fill") {
                             ForEach(stackResults) { s in
@@ -705,7 +719,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -792,6 +806,7 @@ struct GlobalSearchView: View {
             "\(followUpResults.count) follow-ups",
             "\(inspirationResults.count) inspiration",
             "\(cardResults.count) cards",
+            "\(bigCardResults.count) big cards",
             "\(stackResults.count) stack items",
             "\(adhdResults.count) triage",
             "\(sprintResults.count) sprints"

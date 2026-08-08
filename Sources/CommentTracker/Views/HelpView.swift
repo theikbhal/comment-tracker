@@ -66,6 +66,7 @@ struct HelpView: View {
                 notesCard
                 linksCard
                 cardsCard
+                bigCardsCard
                 stacksCard
                 adhdCard
                 pomodoroCard
@@ -675,6 +676,17 @@ private var cardsCard: some View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text("“Add 313 empty” tops the deck up to 313 blank cards to fill in. “Reset” wipes the deck and gives you a fresh set of 313 empty cards. “Hide empty” keeps the grid clean.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var bigCardsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("2000 Cards — an Excel-style 40×50 grid", systemImage: "tablecells.fill")
+                .font(.headline)
+            Text("A massive 2000-card deck laid out like a spreadsheet. Each cell shows its Excel-style reference (e.g. A1, B1, … AJ50), type a word right on the cell to edit in place, right-click for the full dialog with 5 related words and a link, and group cells under a searchable name. Export/import the whole deck as JSON.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

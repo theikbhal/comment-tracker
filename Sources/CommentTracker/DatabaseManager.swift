@@ -584,6 +584,16 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS bigcards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slot INTEGER NOT NULL DEFAULT 0,
+            word TEXT NOT NULL,
+            group_name TEXT NOT NULL DEFAULT '',
+            words TEXT NOT NULL DEFAULT '',
+            link TEXT,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS stacks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,

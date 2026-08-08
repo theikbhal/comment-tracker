@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.41.0]
+
+### Added
+- **2000 Cards**: an Excel-style 40×50 deck (2000 cells). Each cell shows its spreadsheet reference (A1…AJ50) with a row-number gutter, and you can type words directly on cells to edit in place. Right-click for the full dialog (word, group, 5 related words, link), group/search, and export/import as JSON. Add 2000 empty cards or reset the whole deck anytime.
+
 ## [v1.40.0]
 
 ### Added
