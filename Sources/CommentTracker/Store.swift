@@ -84,6 +84,7 @@ final class Store: ObservableObject {
     @Published var blogEditors: [BlogSiteEditor] = []
     @Published var blogSitePosts: [BlogSitePost] = []
     @Published var blogPostAssets: [BlogPostAsset] = []
+    @Published var learnItems: [LearnItem] = []
     @Published var redditPosts: [RedditPost] = []
     @Published var redditComments: [RedditComment] = []
     @Published var roadmap: [RoadmapItem] = []
@@ -263,6 +264,7 @@ final class Store: ObservableObject {
         blogEditors = loadBlogEditors()
         blogSitePosts = loadBlogSitePosts()
         blogPostAssets = loadBlogPostAssets()
+        learnItems = loadLearnItems()
         redditPosts = loadRedditPosts()
         redditComments = loadRedditComments()
         events = loadEvents()
@@ -5860,6 +5862,134 @@ final class Store: ObservableObject {
     func addBlogPostAssetCaption(caption: String, for asset: BlogPostAsset?) {
         guard let asset, let trimmed = Optional(caption.trimmingCharacters(in: .whitespacesAndNewlines)), !trimmed.isEmpty else { return }
         _ = db.execute("UPDATE blog_post_assets SET caption = ? WHERE id = ?", [trimmed, asset.id])
+        refresh()
+    }
+
+    // MARK: - Learn
+
+    private func loadLearnItems() -> [LearnItem] {
+        db.query("SELECT * FROM learn_items ORDER BY COALESCE(next_revision_at, created_at) ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let videoURL = row["video_url"] as? String,
+                let note = row["note"] as? String,
+                let category = row["category"] as? String,
+                let revisionCount = row["revision_count"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return LearnItem(
+                id: id,
+                title: title,
+                videoURL: videoURL,
+                note: note,
+                category: category,
+                revisionCount: revisionCount,
+                lastRevisedAt: (row["last_revised_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                nextRevisionAt: (row["next_revision_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    var sortedLearnItems: [LearnItem] {
+        learnItems.sorted {
+            if $0.nextRevisionAt == nil && $1.nextRevisionAt == nil {
+                return $0.createdAt > $1.createdAt
+            }
+            if $0.nextRevisionAt == nil { return false }
+            if $1.nextRevisionAt == nil { return true }
+            return $0.nextRevisionAt! < $1.nextRevisionAt!
+        }
+    }
+
+    var dueLearnItems: [LearnItem] {
+        sortedLearnItems.filter { $0.nextRevisionAt != nil && ($0.nextRevisionAt! <= Date() || Calendar.current.isDateInToday($0.nextRevisionAt!)) }
+    }
+
+    var upcomingLearnItems: [LearnItem] {
+        sortedLearnItems.filter { $0.nextRevisionAt != nil && $0.nextRevisionAt! > Date() && !Calendar.current.isDateInToday($0.nextRevisionAt!) }
+    }
+
+    var newLearnItems: [LearnItem] {
+        sortedLearnItems.filter { $0.nextRevisionAt == nil }
+    }
+
+    var learnCategories: [String] {
+        var seen: [String] = ["Uncategorized"]
+        for item in learnItems {
+            let cat = item.category.isEmpty ? "Uncategorized" : item.category
+            if !seen.contains(where: { $0.caseInsensitiveCompare(cat) == .orderedSame }) {
+                seen.append(cat)
+            }
+        }
+        return seen
+    }
+
+    func learnItems(category: String) -> [LearnItem] {
+        sortedLearnItems.filter { ($0.category.isEmpty ? "Uncategorized" : $0.category).caseInsensitiveCompare(category) == .orderedSame }
+    }
+
+    func learnItem(_ item: LearnItem, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return item.title.lowercased().contains(q)
+            || item.note.lowercased().contains(q)
+            || item.category.lowercased().contains(q)
+            || item.videoURL.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addLearnItem(title: String, videoURL: String, note: String, category: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let cat = category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Uncategorized" : category.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO learn_items (title, video_url, note, category, revision_count, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)",
+            [trimmed, videoURL, note, cat, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateLearnItem(id: Int, title: String, videoURL: String, note: String, category: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let cat = category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Uncategorized" : category.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = db.execute(
+            "UPDATE learn_items SET title = ?, video_url = ?, note = ?, category = ?, updated_at = ? WHERE id = ?",
+            [trimmed, videoURL, note, cat, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func markLearnItemRevised(_ id: Int) {
+        guard let item = learnItems.first(where: { $0.id == id }) else { return }
+        let count = item.revisionCount + 1
+        let index = min(count - 1, learnRevisionIntervals.count - 1)
+        let interval = learnRevisionIntervals[index]
+        let next = Date().addingTimeInterval(interval)
+        _ = db.execute(
+            "UPDATE learn_items SET revision_count = ?, last_revised_at = ?, next_revision_at = ?, updated_at = ? WHERE id = ?",
+            [count, Date().timeIntervalSince1970, next.timeIntervalSince1970, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func resetLearnItemRevision(_ id: Int) {
+        _ = db.execute(
+            "UPDATE learn_items SET revision_count = 0, last_revised_at = NULL, next_revision_at = NULL, updated_at = ? WHERE id = ?",
+            [Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteLearnItem(_ id: Int) {
+        _ = db.execute("DELETE FROM learn_items WHERE id = ?", [id])
         refresh()
     }
 

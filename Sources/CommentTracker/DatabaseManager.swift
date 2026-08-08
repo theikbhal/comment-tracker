@@ -531,6 +531,18 @@ final class DatabaseManager {
             caption TEXT NOT NULL DEFAULT '',
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS learn_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            video_url TEXT NOT NULL DEFAULT '',
+            note TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL DEFAULT 'Uncategorized',
+            revision_count INTEGER NOT NULL DEFAULT 0,
+            last_revised_at REAL,
+            next_revision_at REAL,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS reddit_posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,

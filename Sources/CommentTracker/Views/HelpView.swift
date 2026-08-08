@@ -49,6 +49,7 @@ struct HelpView: View {
                 miniVideosCard
                 ytDownloaderCard
                 blog313Card
+                learnCard
                 redditCard
                 eventsCard
                 treeCard
@@ -460,6 +461,17 @@ struct HelpView: View {
             Label("313 Websites — build a blogging empire", systemImage: "globe")
                 .font(.headline)
             Text("Track up to 313 blogging websites with milestone progress (1, 2, 3, 5, 7, 10 … 300, 313). Each site has a theme, target country, language (Hindi, Telugu, Spanish, Portuguese, European, South American, and more), tier-1/2/3 flag, and a Google AdSense status. Manage the editor/team for each site, and add posts with local image, video, and audio assets saved into the app's storage.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var learnCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Learn — what to study, and when to revise it", systemImage: "graduationcap.fill")
+                .font(.headline)
+            Text("Keep anything you're learning — a video, topic, or skill — with notes and a category. Each item gets a spaced-repetition revision schedule (1d, 3d, 7d, 14d, 30d, 60d, 120d…). Hit Revised after studying and the app schedules the next review; a Due section reminds you when to revise. Videos play right in the app.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

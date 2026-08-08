@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.46.0]
+
+### Added
+- **Learn**: a spaced-repetition study tracker. Add anything you're learning (a video, topic, or skill) with a video/link, markdown notes, and a category (or make a new one). Each item gets a revision schedule — hit **Revised** and the app queues the next review at 1d, 3d, 7d, 14d, 30d, 60d, 120d, 240d, 365d. Items sort into **Due now**, **Upcoming**, and **New** sections so you always know when to revise. Videos play right in the app.
+
 ## [v1.45.0]
 
 ### Added

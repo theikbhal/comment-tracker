@@ -165,6 +165,10 @@ struct GlobalSearchView: View {
         store.blogSites.filter { store.blogSite($0, matches: query) }
     }
 
+    private var learnResults: [LearnItem] {
+        store.learnItems.filter { store.learnItem($0, matches: query) }
+    }
+
     private var eventResults: [EventShow] {
         store.events.filter { store.eventShow($0, matches: query) }
     }
@@ -530,6 +534,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if learnResults.count > 0 {
+                        section("Learn", icon: "graduationcap.fill") {
+                            ForEach(learnResults) { item in
+                                row(icon: "graduationcap.fill", color: .indigo, title: item.title, subtitle: "\(item.category) · \(item.revisionCount)x revised") {
+                                    dismiss()
+                                    onNavigate(.learn)
+                                }
+                            }
+                        }
+                    }
                     if eventResults.count > 0 {
                         section("Events", icon: "calendar.badge.clock") {
                             ForEach(eventResults) { e in
@@ -761,7 +775,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && blogSiteResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && ytDownloadResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && backgroundResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && blogSiteResults.isEmpty && learnResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && ytDownloadResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && backgroundResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -840,6 +854,7 @@ struct GlobalSearchView: View {
             "\(redditResults.count) posts",
             "\(ytDownloadResults.count) downloads",
             "\(blogSiteResults.count) sites",
+            "\(learnResults.count) learning",
             "\(eventResults.count) events",
             "\(treeResults.count) branches",
             "\(faqResults.count) faqs",

@@ -1239,6 +1239,53 @@ struct BlogPostAsset: Identifiable, Equatable {
     let createdAt: Date
 }
 
+// MARK: - Learn
+
+let learnRevisionIntervals: [TimeInterval] = [
+    1 * 86400,
+    3 * 86400,
+    7 * 86400,
+    14 * 86400,
+    30 * 86400,
+    60 * 86400,
+    120 * 86400,
+    240 * 86400,
+    365 * 86400,
+]
+
+struct LearnItem: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var videoURL: String
+    var note: String
+    var category: String
+    var revisionCount: Int
+    var lastRevisedAt: Date?
+    var nextRevisionAt: Date?
+    var createdAt: Date
+    var updatedAt: Date
+
+    var isDueToday: Bool {
+        guard let next = nextRevisionAt else { return false }
+        return Calendar.current.isDateInToday(next) || next < Date()
+    }
+
+    var isOverdue: Bool {
+        guard let next = nextRevisionAt else { return false }
+        return next < Date()
+    }
+
+    var hasVideo: Bool {
+        !videoURL.isEmpty
+    }
+
+    var tagList: [String] {
+        var tags: [String] = []
+        if !category.isEmpty { tags.append(category) }
+        return tags
+    }
+}
+
 // MARK: - Mini Reddit
 
 struct RedditPost: Identifiable, Equatable {
