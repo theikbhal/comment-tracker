@@ -1574,6 +1574,34 @@ struct AdhdTriageItem: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - Background Sounds
+
+let backgroundPresetNames = ["Astagfar", "Darood", "Quran", "Rain", "White Noise", "Ocean", "Forest", "Lofi"]
+
+enum BackgroundSoundKind: String, CaseIterable, Identifiable {
+    case link, path, youtube
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .link: return "Audio / video link"
+        case .path: return "Local file path"
+        case .youtube: return "YouTube / Short"
+        }
+    }
+}
+
+struct BackgroundSound: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var kind: BackgroundSoundKind
+    var value: String
+    var note: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Pomodoro
 
 enum PomodoroMode: String, CaseIterable, Identifiable {

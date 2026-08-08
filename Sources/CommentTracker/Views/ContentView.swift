@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, bigcards, stacks, adhd, pomodoro, deepwork, sprints, voice, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, bigcards, stacks, adhd, background, pomodoro, deepwork, sprints, voice, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -52,6 +52,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .bigcards: return "2000 Cards"
         case .stacks: return "Stacks"
         case .adhd: return "Task Triage"
+        case .background: return "Background Sounds"
         case .pomodoro: return "Pomodoro"
         case .deepwork: return "Deep Work"
         case .sprints: return "Sprints"
@@ -109,6 +110,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .bigcards: return "tablecells.fill"
         case .stacks: return "rectangle.stack.fill"
         case .adhd: return "wind"
+        case .background: return "speaker.wave.2.fill"
         case .pomodoro: return "timer"
         case .deepwork: return "brain.head.profile"
         case .sprints: return "flag"
@@ -139,7 +141,13 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            detail(for: selection)
+            VStack(spacing: 0) {
+                detail(for: selection)
+                if store.bgCurrentSoundID != nil {
+                    Divider()
+                    globalBackgroundBar
+                }
+            }
         }
         .navigationTitle("Comment Tracker")
         .sheet(isPresented: $showingAdd) {
@@ -224,6 +232,7 @@ struct ContentView: View {
         case .bigcards: BigCardsView()
         case .stacks: StacksView()
         case .adhd: AdhdView()
+        case .background: BackgroundSoundsView()
         case .pomodoro: PomodoroView()
         case .deepwork: DeepWorkView()
         case .sprints: SprintsView()
@@ -249,5 +258,70 @@ struct ContentView: View {
         }
         .padding(12)
         .background(.bar)
+    }
+
+    private var globalBackgroundBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: store.bgIsPlaying ? "speaker.wave.2.fill" : "pause.circle.fill")
+                .foregroundStyle(Color.accentColor)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(store.bgCurrentSound?.name ?? "Background")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                HStack(spacing: 8) {
+                    Toggle(isOn: bgRepeatBinding) {
+                        Label("Loop", systemImage: "repeat")
+                            .font(.caption2)
+                    }
+                    .toggleStyle(.button)
+                    Slider(value: bgVolumeBinding, in: 0...1)
+                        .controlSize(.small)
+                        .frame(width: 120)
+                    Text("\(Int(store.bgVolume * 100))%")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 34, alignment: .trailing)
+                }
+            }
+            Spacer()
+            Button {
+                store.toggleBackgroundPlayback()
+            } label: {
+                Image(systemName: store.bgIsPlaying ? "pause.fill" : "play.fill")
+                    .frame(width: 18)
+            }
+            .buttonStyle(.bordered)
+            Button {
+                store.stopBackgroundPlayback()
+            } label: {
+                Image(systemName: "stop.fill")
+            }
+            .buttonStyle(.bordered)
+            Button {
+                selection = .background
+            } label: {
+                Image(systemName: "speaker.wave.2.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Open Background Sounds")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    private var bgRepeatBinding: Binding<Bool> {
+        Binding(
+            get: { store.bgRepeat },
+            set: { _ in store.toggleBackgroundRepeat() }
+        )
+    }
+
+    private var bgVolumeBinding: Binding<Double> {
+        Binding(
+            get: { Double(store.bgVolume) },
+            set: { store.setBackgroundVolume(Float($0)) }
+        )
     }
 }

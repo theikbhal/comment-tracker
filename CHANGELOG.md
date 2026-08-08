@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.42.0]
+
+### Added
+- **Background Sounds**: play any audio/video link, a YouTube/Short/Reel, or a local file as a looping background while you work. Quick one-click presets for Astagfar, Darood, Quran, Rain, White Noise, Ocean, Forest, and Lofi. The sound keeps playing when you switch tabs, and a control bar appears at the bottom of every screen so you can pause, stop, loop, and adjust volume from anywhere. Add a note to each sound.
+
 ## [v1.41.0]
 
 ### Added

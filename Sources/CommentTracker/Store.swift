@@ -95,6 +95,7 @@ final class Store: ObservableObject {
     @Published var stackItems: [StackItem] = []
     @Published var stackComments: [StackComment] = []
     @Published var adhdTriage: [AdhdTriageItem] = []
+    @Published var backgroundSounds: [BackgroundSound] = []
     @Published var pomodoros: [PomodoroSession] = []
     @Published var sprints: [Sprint] = []
     @Published var stories: [Story] = []
@@ -138,6 +139,15 @@ final class Store: ObservableObject {
     @Published var nowPlayingAudioNoteID: Int?
     @Published var isPlaying = false
     @Published var audioPlaybackTime: TimeInterval = 0
+
+    // Background sounds (global player)
+    private var bgPlayer: AVPlayer?
+    private var bgPlayerItem: AVPlayerItem?
+    private var bgEndObserver: NSObjectProtocol?
+    @Published var bgCurrentSoundID: Int?
+    @Published var bgIsPlaying = false
+    @Published var bgVolume: Float = 0.6
+    @Published var bgRepeat = true
 
     // Audio recording (Voice notes)
     private var audioRecorder: AVAudioRecorder?
@@ -258,6 +268,7 @@ final class Store: ObservableObject {
         stackItems = loadStackItems()
         stackComments = loadStackComments()
         adhdTriage = loadAdhdTriage()
+        backgroundSounds = loadBackgroundSounds()
         pomodoros = loadPomodoros()
         sprints = loadSprints()
         stories = loadStories()
@@ -2172,6 +2183,143 @@ final class Store: ObservableObject {
         refresh()
     }
 
+    // MARK: - Background Sounds (global player)
+
+    func backgroundSound(_ s: BackgroundSound, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if s.name.lowercased().contains(q) { return true }
+        if s.note.lowercased().contains(q) { return true }
+        if s.value.lowercased().contains(q) { return true }
+        return false
+    }
+
+    @discardableResult
+    func addBackgroundSound(name: String, kind: BackgroundSoundKind, value: String, note: String = "") -> Int? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO background_sounds (name, kind, value, note, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [trimmedName, kind.rawValue, value, note, backgroundSounds.count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateBackgroundSound(id: Int, name: String, kind: BackgroundSoundKind, value: String, note: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE background_sounds SET name = ?, kind = ?, value = ?, note = ?, updated_at = ? WHERE id = ?",
+            [trimmedName, kind.rawValue, value, note, Date().timeIntervalSince1970, id]
+        )
+        if bgCurrentSoundID == id {
+            _ = loadBackgroundSounds()
+            let sounds = self.backgroundSounds
+            if let sound = sounds.first(where: { $0.id == id }) {
+                playBackgroundSound(sound)
+            }
+        }
+        refresh()
+    }
+
+    func deleteBackgroundSound(_ id: Int) {
+        if bgCurrentSoundID == id {
+            stopBackgroundPlayback()
+        }
+        _ = db.execute("DELETE FROM background_sounds WHERE id = ?", [id])
+        refresh()
+    }
+
+    func moveBackgroundSound(id: Int, direction: Int) {
+        guard let index = backgroundSounds.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < backgroundSounds.count else { return }
+        let other = backgroundSounds[target]
+        _ = db.execute("UPDATE background_sounds SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE background_sounds SET position = ?, updated_at = ? WHERE id = ?", [backgroundSounds[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func playBackgroundSound(_ sound: BackgroundSound) {
+        stopBackgroundPlayback()
+        let trimmed = sound.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let player: AVPlayer
+        if let url = URL(string: trimmed), (url.scheme == "http" || url.scheme == "https") {
+            let item = AVPlayerItem(url: url)
+            bgPlayerItem = item
+            player = AVPlayer(playerItem: item)
+        } else {
+            let fileURL = URL(fileURLWithPath: trimmed)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+            let item = AVPlayerItem(url: fileURL)
+            bgPlayerItem = item
+            player = AVPlayer(playerItem: item)
+        }
+
+        player.volume = bgVolume
+        bgPlayer = player
+        bgCurrentSoundID = sound.id
+
+        bgEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: bgPlayerItem,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.bgRepeat else { return }
+            self.bgPlayer?.seek(to: .zero)
+            self.bgPlayer?.play()
+        }
+
+        player.play()
+        bgIsPlaying = true
+    }
+
+    func toggleBackgroundPlayback() {
+        guard let player = bgPlayer else { return }
+        if player.rate > 0 {
+            player.pause()
+            bgIsPlaying = false
+        } else {
+            player.play()
+            bgIsPlaying = true
+        }
+    }
+
+    func stopBackgroundPlayback() {
+        if let observer = bgEndObserver {
+            NotificationCenter.default.removeObserver(observer)
+            bgEndObserver = nil
+        }
+        bgPlayer?.pause()
+        bgPlayer = nil
+        bgPlayerItem = nil
+        bgCurrentSoundID = nil
+        bgIsPlaying = false
+    }
+
+    func setBackgroundVolume(_ volume: Float) {
+        bgVolume = max(0, min(1, volume))
+        bgPlayer?.volume = bgVolume
+    }
+
+    func toggleBackgroundRepeat() {
+        bgRepeat.toggle()
+    }
+
+    var bgCurrentSound: BackgroundSound? {
+        guard let id = bgCurrentSoundID else { return nil }
+        return backgroundSounds.first(where: { $0.id == id })
+    }
+
+    func bgPresetExists(_ name: String) -> BackgroundSound? {
+        backgroundSounds.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+    }
+
     // MARK: - Pomodoro
 
     var focusSessionsToday: Int {
@@ -2914,6 +3062,29 @@ final class Store: ObservableObject {
                 title: title,
                 note: row["note"] as? String ?? "",
                 action: action,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadBackgroundSounds() -> [BackgroundSound] {
+        db.query("SELECT * FROM background_sounds ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let kindRaw = row["kind"] as? String,
+                let kind = BackgroundSoundKind(rawValue: kindRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return BackgroundSound(
+                id: id,
+                name: name,
+                kind: kind,
+                value: row["value"] as? String ?? "",
+                note: row["note"] as? String ?? "",
                 position: position,
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)

@@ -209,6 +209,10 @@ struct GlobalSearchView: View {
         store.adhdTriage.filter { store.adhdTriageItem($0, matches: query) }
     }
 
+    private var backgroundResults: [BackgroundSound] {
+        store.backgroundSounds.filter { store.backgroundSound($0, matches: query) }
+    }
+
     private var sprintResults: [Sprint] {
         store.sprints.filter { store.sprint($0, matches: query) }
     }
@@ -699,6 +703,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if backgroundResults.count > 0 {
+                        section("Background Sounds", icon: "speaker.wave.2.fill") {
+                            ForEach(backgroundResults) { b in
+                                row(icon: "speaker.wave.2.fill", color: .indigo, title: b.name, subtitle: "Background · \(b.kind.label)") {
+                                    dismiss()
+                                    onNavigate(.background)
+                                }
+                            }
+                        }
+                    }
                     if sprintResults.count > 0 {
                         section("Sprints", icon: "flag") {
                             ForEach(sprintResults) { s in
@@ -719,7 +733,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && backgroundResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -809,6 +823,7 @@ struct GlobalSearchView: View {
             "\(bigCardResults.count) big cards",
             "\(stackResults.count) stack items",
             "\(adhdResults.count) triage",
+            "\(backgroundResults.count) bg sounds",
             "\(sprintResults.count) sprints"
         ]
         .filter { !$0.hasPrefix("0 ") }

@@ -68,6 +68,7 @@ struct HelpView: View {
                 cardsCard
                 bigCardsCard
                 stacksCard
+                backgroundCard
                 adhdCard
                 pomodoroCard
                 sprintsCard
@@ -698,6 +699,17 @@ private var cardsCard: some View {
             Label("Stacks — push, pop, and organize", systemImage: "rectangle.stack.fill")
                 .font(.headline)
             Text("Color-coded stacks you can push one-word items onto. Type up to 3 words and hit Enter to push to the top; Pop moves the top item to the built-in Uncategorized stack. Double-click any item to open its detail: description, links, and Trello-style comments with the newest at the top. Add and recolor as many stacks as you like.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var backgroundCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Background Sounds — focus audio everywhere", systemImage: "speaker.wave.2.fill")
+                .font(.headline)
+            Text("Play any audio or video link (Astagfar, Darood, Quran, rain, lo-fi, white noise…), a YouTube/Short/Reel, or a local file — it loops continuously and keeps playing while you switch between tabs. A control bar appears at the bottom of every screen so you can pause, stop, loop, and adjust volume from anywhere. Quick presets are one click to set up or play.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
