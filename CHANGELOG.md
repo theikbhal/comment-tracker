@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.43.0]
+
+### Added
+- **Media Host**: Mini Videos is now a full media library. Host local audio, video, and image files (they're copied into the app's storage), paste a YouTube link that plays right in the app, or save any link — each item gets a name, markdown description, comma-separated tags, and a kind badge. Filter by kind or tag, search everything, and open any item to play it (video player for video, waveform + playback controls for audio, inline preview for images) with the nested-reply comments feed underneath.
+
 ## [v1.42.0]
 
 ### Added

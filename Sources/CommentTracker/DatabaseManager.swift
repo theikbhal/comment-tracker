@@ -705,6 +705,9 @@ final class DatabaseManager {
         ensureColumn(table: "audio_notes", column: "notes", definition: "TEXT NOT NULL DEFAULT ''")
         ensureColumn(table: "deepwork_sessions", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
         ensureColumn(table: "long_term_projects", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
+        ensureColumn(table: "hosted_videos", column: "kind", definition: "TEXT NOT NULL DEFAULT 'youtube'")
+        ensureColumn(table: "hosted_videos", column: "tags", definition: "TEXT NOT NULL DEFAULT ''")
+        ensureColumn(table: "hosted_videos", column: "filename", definition: "TEXT NOT NULL DEFAULT ''")
         _ = execute("INSERT OR IGNORE INTO stacks (name, color, position, created_at, updated_at) VALUES ('Uncategorized', 'gray', 0, 0, 0)")
     }
 

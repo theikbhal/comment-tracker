@@ -5330,6 +5330,13 @@ final class Store: ObservableObject {
         hostedVideos.sorted { $0.position < $1.position }
     }
 
+    var mediaDirectoryURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("CommentTracker/HostedMedia", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
     private func loadHostedVideos() -> [HostedVideo] {
         db.query("SELECT * FROM hosted_videos ORDER BY position ASC, created_at DESC").compactMap { row in
             guard
@@ -5346,6 +5353,9 @@ final class Store: ObservableObject {
                 title: title,
                 description: description,
                 url: url,
+                kind: HostedMediaKind(rawValue: row["kind"] as? String ?? "") ?? .youtube,
+                tags: row["tags"] as? String ?? "",
+                filename: row["filename"] as? String ?? "",
                 position: position,
                 createdAt: Date(timeIntervalSince1970: created),
                 updatedAt: Date(timeIntervalSince1970: updated)
@@ -5374,30 +5384,134 @@ final class Store: ObservableObject {
     func hostedVideo(_ v: HostedVideo, matches query: String) -> Bool {
         guard !query.isEmpty else { return true }
         let q = query.lowercased()
-        return v.title.lowercased().contains(q) || v.description.lowercased().contains(q)
+        if v.title.lowercased().contains(q) { return true }
+        if v.description.lowercased().contains(q) { return true }
+        if v.tagList.contains(where: { $0.lowercased().contains(q) }) { return true }
+        return false
+    }
+
+    func hostedVideos(tagged tag: String) -> [HostedVideo] {
+        hostedVideos.filter { $0.tagList.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) }
+    }
+
+    var hostedVideoTagList: [String] {
+        var seen: [String] = []
+        for v in hostedVideos {
+            for tag in v.tagList where !seen.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
+                seen.append(tag)
+            }
+        }
+        return seen
+    }
+
+    func hostedVideoKind(_ kind: HostedMediaKind) -> [HostedVideo] {
+        hostedVideos.filter { $0.kind == kind }
     }
 
     @discardableResult
     func addHostedVideo(title: String, description: String, url: String) -> Int? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
+        let kind: HostedMediaKind = youtubeVideoID(from: url) != nil ? .youtube : .link
         let maxPos = (hostedVideos.map(\.position).max() ?? -1) + 1
         let now = Date().timeIntervalSince1970
         _ = db.execute(
-            "INSERT INTO hosted_videos (title, description, url, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            [trimmed, description, url, maxPos, now, now]
+            "INSERT INTO hosted_videos (title, description, url, kind, tags, filename, position, created_at, updated_at) VALUES (?, ?, ?, ?, '', '', ?, ?, ?)",
+            [trimmed, description, url, kind.rawValue, maxPos, now, now]
         )
         let id = db.lastInsertID()
         refresh()
         return id
     }
 
+    @discardableResult
+    func addHostedMedia(title: String, description: String, kind: HostedMediaKind, url: String, tags: String, filename: String = "") -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (hostedVideos.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO hosted_videos (title, description, url, kind, tags, filename, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, description, url, kind.rawValue, tags, filename, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    @discardableResult
+    func addHostedLocalFile(title: String, description: String, tags: String, from sourceURL: URL) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ext = sourceURL.pathExtension.lowercased()
+        let kind: HostedMediaKind
+        if ["jpg", "jpeg", "png", "gif", "heic", "webp", "tiff"].contains(ext) {
+            kind = .image
+        } else if ["mp3", "m4a", "aac", "wav", "flac", "ogg", "opus"].contains(ext) {
+            kind = .audio
+        } else if ["mp4", "mov", "m4v", "webm", "avi", "mkv"].contains(ext) {
+            kind = .video
+        } else {
+            kind = .link
+        }
+        let filename = UUID().uuidString + "." + ext
+        let dest = mediaDirectoryURL.appendingPathComponent(filename)
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: dest)
+        } catch {
+            return nil
+        }
+        return addHostedMedia(title: trimmed.isEmpty ? sourceURL.lastPathComponent : trimmed, description: description, kind: kind, url: "", tags: tags, filename: filename)
+    }
+
+    @discardableResult
+    func addHostedLocalFileReplacing(existing: HostedVideo, from sourceURL: URL, tags: String, title: String, description: String) -> Bool {
+        let ext = sourceURL.pathExtension.lowercased()
+        let kind: HostedMediaKind
+        if ["jpg", "jpeg", "png", "gif", "heic", "webp", "tiff"].contains(ext) {
+            kind = .image
+        } else if ["mp3", "m4a", "aac", "wav", "flac", "ogg", "opus"].contains(ext) {
+            kind = .audio
+        } else if ["mp4", "mov", "m4v", "webm", "avi", "mkv"].contains(ext) {
+            kind = .video
+        } else {
+            kind = .link
+        }
+        let filename = UUID().uuidString + "." + ext
+        let dest = mediaDirectoryURL.appendingPathComponent(filename)
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: dest)
+        } catch {
+            return false
+        }
+        if !existing.filename.isEmpty {
+            try? FileManager.default.removeItem(at: mediaDirectoryURL.appendingPathComponent(existing.filename))
+        }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = db.execute(
+            "UPDATE hosted_videos SET title = ?, description = ?, url = '', kind = ?, tags = ?, filename = ?, updated_at = ? WHERE id = ?",
+            [trimmed.isEmpty ? existing.title : trimmed, description, kind.rawValue, tags, filename, Date().timeIntervalSince1970, existing.id]
+        )
+        refresh()
+        return true
+    }
+
     func updateHostedVideo(id: Int, title: String, description: String, url: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        let kind: HostedMediaKind = youtubeVideoID(from: url) != nil ? .youtube : .link
         _ = db.execute(
-            "UPDATE hosted_videos SET title = ?, description = ?, url = ?, updated_at = ? WHERE id = ?",
-            [trimmed, description, url, Date().timeIntervalSince1970, id]
+            "UPDATE hosted_videos SET title = ?, description = ?, url = ?, kind = ?, updated_at = ? WHERE id = ?",
+            [trimmed, description, url, kind.rawValue, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func updateHostedMedia(id: Int, title: String, description: String, url: String, kind: HostedMediaKind, tags: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE hosted_videos SET title = ?, description = ?, url = ?, kind = ?, tags = ?, updated_at = ? WHERE id = ?",
+            [trimmed, description, url, kind.rawValue, tags, Date().timeIntervalSince1970, id]
         )
         refresh()
     }
@@ -5414,6 +5528,10 @@ final class Store: ObservableObject {
     }
 
     func deleteHostedVideo(_ id: Int) {
+        if let video = hostedVideos.first(where: { $0.id == id }), !video.filename.isEmpty {
+            let file = mediaDirectoryURL.appendingPathComponent(video.filename)
+            try? FileManager.default.removeItem(at: file)
+        }
         _ = db.execute("DELETE FROM hosted_videos WHERE id = ?", [id])
         _ = db.execute("DELETE FROM hosted_video_comments WHERE video_id = ?", [id])
         refresh()

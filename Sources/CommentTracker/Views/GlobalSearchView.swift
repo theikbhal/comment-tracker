@@ -483,9 +483,9 @@ struct GlobalSearchView: View {
                         }
                     }
                     if hostedVideoResults.count > 0 {
-                        section("Mini Videos", icon: "video.fill") {
+                        section("Media Host", icon: "video.fill") {
                             ForEach(hostedVideoResults) { v in
-                                row(icon: "video.fill", color: .red, title: v.title, subtitle: "\(store.hostedVideoComments(for: v.id).count) comments") {
+                                row(icon: v.kind.symbol, color: v.kind.color, title: v.title, subtitle: "\(store.hostedVideoComments(for: v.id).count) comments") {
                                     dismiss()
                                     onNavigate(.hosting)
                                 }
@@ -808,7 +808,7 @@ struct GlobalSearchView: View {
             "\(featureResults.count) requests",
             "\(tableResults.count) tables",
             "\(airtableResults.count) airtables",
-            "\(hostedVideoResults.count) videos",
+            "\(hostedVideoResults.count) media",
             "\(redditResults.count) posts",
             "\(eventResults.count) events",
             "\(treeResults.count) branches",

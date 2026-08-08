@@ -422,9 +422,9 @@ struct HelpView: View {
 
     private var miniVideosCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Mini Videos — host your own", systemImage: "video.fill")
+            Label("Media Host — host your own", systemImage: "video.fill")
                 .font(.headline)
-            Text("Paste a YouTube link and it plays right in the app with a thumbnail. Each video has a title, a markdown description, and a comments feed with nested reply threads.")
+            Text("Host local audio, video, images, and links — or paste a YouTube link that plays right in the app. Each item has a name, markdown description, tags, a kind filter, and a comments feed with nested reply threads. Local files are copied into the app's storage.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

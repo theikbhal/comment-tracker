@@ -1081,17 +1081,59 @@ struct AirtableCell: Identifiable, Equatable {
 
 // MARK: - Mini video hosting
 
+enum HostedMediaKind: String, CaseIterable, Identifiable {
+    case youtube, audio, video, image, link
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .youtube: return "YouTube"
+        case .audio: return "Audio"
+        case .video: return "Video"
+        case .image: return "Image"
+        case .link: return "Link"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .youtube: return "play.rectangle.fill"
+        case .audio: return "waveform"
+        case .video: return "film.fill"
+        case .image: return "photo.fill"
+        case .link: return "link"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .youtube: return .red
+        case .audio: return .purple
+        case .video: return .indigo
+        case .image: return .teal
+        case .link: return .blue
+        }
+    }
+}
+
 struct HostedVideo: Identifiable, Equatable {
     let id: Int
     var title: String
     var description: String
     var url: String
+    var kind: HostedMediaKind
+    var tags: String
+    var filename: String
     var position: Int
     var createdAt: Date
     var updatedAt: Date
 
     var isEmbeddableYouTube: Bool {
-        youtubeVideoID(from: url) != nil
+        kind == .youtube && youtubeVideoID(from: url) != nil
+    }
+
+    var tagList: [String] {
+        tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
     }
 }
 

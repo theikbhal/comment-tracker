@@ -38,7 +38,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .people: return "People"
         case .thoughts: return "Thoughts"
         case .videos: return "Videos"
-        case .hosting: return "Mini Videos"
+        case .hosting: return "Media Host"
         case .reddit: return "Reddit"
         case .events: return "Events"
         case .tree: return "Mini Tree"

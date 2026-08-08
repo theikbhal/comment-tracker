@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
 import WebKit
+import AVKit
+import UniformTypeIdentifiers
 
 func youtubeVideoID(from urlString: String) -> String? {
     guard let url = URL(string: urlString) else { return nil }
@@ -48,9 +50,17 @@ struct HostedVideosView: View {
     @State private var searchText = ""
     @State private var editing: HostedVideo?
     @State private var confirmingDelete: HostedVideo?
+    @State private var kindFilter: HostedMediaKind?
+    @State private var tagFilter: String?
 
-    private var videos: [HostedVideo] {
+    private var filtered: [HostedVideo] {
         var list = store.sortedHostedVideos
+        if let kindFilter {
+            list = list.filter { $0.kind == kindFilter }
+        }
+        if let tagFilter {
+            list = list.filter { $0.tagList.contains(where: { $0.caseInsensitiveCompare(tagFilter) == .orderedSame }) }
+        }
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !q.isEmpty {
             list = list.filter { store.hostedVideo($0, matches: q) }
@@ -62,15 +72,17 @@ struct HostedVideosView: View {
         VStack(spacing: 0) {
             header
             Divider()
+            filterBar
+            Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if videos.isEmpty {
-                        Text("No hosted videos yet. Add one — paste a YouTube link and it plays right here with comments.")
+                    if filtered.isEmpty {
+                        Text("No hosted media yet. Add a local audio, video, image, or a YouTube link — they all live here with comments.")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                             .padding(.vertical, 24)
                     }
-                    ForEach(videos) { video in
+                    ForEach(filtered) { video in
                         HostedVideoCard(video: video) {
                             editing = video
                         } onDelete: {
@@ -84,20 +96,14 @@ struct HostedVideosView: View {
             }
         }
         .sheet(isPresented: $showingAdd) {
-            HostedVideoEditSheet { title, description, url in
-                store.addHostedVideo(title: title, description: description, url: url)
-            }
+            HostedVideoEditSheet()
+                .environmentObject(store)
         }
         .sheet(item: $editing) { video in
-            HostedVideoDetailSheet(
-                video: video,
-                onSave: { title, description, url in
-                    store.updateHostedVideo(id: video.id, title: title, description: description, url: url)
-                }
-            )
-            .environmentObject(store)
+            HostedVideoDetailSheet(video: video)
+                .environmentObject(store)
         }
-        .confirmationDialog("Delete this video and its comments?", isPresented: Binding(
+        .confirmationDialog("Delete this media and its comments?", isPresented: Binding(
             get: { confirmingDelete != nil },
             set: { if !$0 { confirmingDelete = nil } }
         ), titleVisibility: .visible) {
@@ -114,7 +120,7 @@ struct HostedVideosView: View {
     private var header: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Mini Videos")
+                Text("Media Host")
                     .font(.title.bold())
                 Text("\(store.hostedVideos.count) hosted")
                     .font(.caption)
@@ -126,18 +132,62 @@ struct HostedVideosView: View {
             Button {
                 showingAdd = true
             } label: {
-                Label("Add Video", systemImage: "plus")
+                Label("Add Media", systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
         }
         .padding(16)
     }
 
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            filterChip("All", isOn: kindFilter == nil) { kindFilter = nil }
+            ForEach(HostedMediaKind.allCases) { kind in
+                filterChip(kind.label, isOn: kindFilter == kind) {
+                    kindFilter = kind
+                }
+            }
+            Spacer()
+            if store.hostedVideoTagList.count > 0 {
+                Divider().frame(height: 16)
+                Menu {
+                    Button("All tags") { tagFilter = nil }
+                    Divider()
+                    ForEach(store.hostedVideoTagList, id: \.self) { tag in
+                        Button(tag) { tagFilter = tag }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "tag.fill")
+                        Text(tagFilter ?? "Tag")
+                    }
+                    .font(.caption)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func filterChip(_ label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption.weight(isOn ? .semibold : .regular))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(isOn ? Color.accentColor : Color.gray.opacity(0.12), in: Capsule())
+                .foregroundStyle(isOn ? .white : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var searchField: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search videos…", text: $searchText)
+            TextField("Search media…", text: $searchText)
                 .textFieldStyle(.plain)
             if !searchText.isEmpty {
                 Button {
@@ -180,19 +230,22 @@ struct HostedVideoCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            if let id = youtubeVideoID(from: video.url) {
-                YouTubeThumb(videoID: id)
-                    .frame(width: 120, height: 68)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray.opacity(0.15))
-                    .frame(width: 120, height: 68)
-                    .overlay(Image(systemName: "play.rectangle.fill").foregroundStyle(.tertiary))
-            }
+            MediaThumbView(video: video, width: 120, height: 72)
+                .frame(width: 120, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) {
-                Text(video.title)
-                    .font(.subheadline.weight(.bold))
+                HStack(spacing: 6) {
+                    Text(video.title)
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    Spacer()
+                    Label(video.kind.label, systemImage: video.kind.symbol)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(video.kind.color)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(video.kind.color.opacity(0.15), in: Capsule())
+                }
                 if let rendered = renderedDescription {
                     Text(rendered)
                         .font(.caption)
@@ -202,6 +255,18 @@ struct HostedVideoCard: View {
                             NSWorkspace.shared.open(url)
                             return .handled
                         })
+                }
+                if !video.tagList.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(video.tagList, id: \.self) { tag in
+                            Text("#\(tag)")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.blue)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(.blue.opacity(0.1), in: Capsule())
+                        }
+                    }
                 }
                 HStack(spacing: 10) {
                     Text("\(commentCount) comment\(commentCount == 1 ? "" : "s")")
@@ -216,10 +281,10 @@ struct HostedVideoCard: View {
                     } label: {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(video.kind.color)
                     }
                     .buttonStyle(.borderless)
-                    .help("Open — watch, edit, comment")
+                    .help("Open — watch, listen, comment")
                     Button {
                         onDelete()
                     } label: {
@@ -228,7 +293,7 @@ struct HostedVideoCard: View {
                             .foregroundStyle(.red)
                     }
                     .buttonStyle(.borderless)
-                    .help("Delete video")
+                    .help("Delete media")
                 }
             }
         }
@@ -252,6 +317,51 @@ struct HostedVideoCard: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+}
+
+// MARK: - Media thumbnail by kind
+
+struct MediaThumbView: View {
+    let video: HostedVideo
+    var width: CGFloat = 120
+    var height: CGFloat = 72
+
+    var body: some View {
+        Group {
+            if let id = youtubeVideoID(from: video.url) {
+                YouTubeThumb(videoID: id)
+            } else if video.kind == .image {
+                if let fileURL = localFileURL, let image = NSImage(contentsOf: fileURL) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    placeholder
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: width, height: height)
+        .clipped()
+    }
+
+    private var localFileURL: URL? {
+        guard !video.filename.isEmpty else { return nil }
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return base.appendingPathComponent("CommentTracker/HostedMedia").appendingPathComponent(video.filename)
+    }
+
+    private var placeholder: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(video.kind.color.opacity(0.12))
+            .frame(width: width, height: height)
+            .overlay(
+                Image(systemName: video.kind.symbol)
+                    .font(.system(size: 24))
+                    .foregroundStyle(video.kind.color)
+            )
     }
 }
 
@@ -286,47 +396,90 @@ struct YouTubeThumb: NSViewRepresentable {
 // MARK: - Add / edit sheet
 
 struct HostedVideoEditSheet: View {
+    @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
     var existing: HostedVideo? = nil
-    let onSave: (String, String, String) -> Void
 
     @State private var title = ""
     @State private var description = ""
     @State private var url = ""
+    @State private var kind: HostedMediaKind = .youtube
+    @State private var tags = ""
+    @State private var selectedFileURL: URL?
+    @State private var importingFile = false
 
     private var youtubeID: String? { youtubeVideoID(from: url) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(existing == nil ? "Add Video" : "Edit Video")
+            Text(existing == nil ? "Add Media" : "Edit Media")
                 .font(.title2.bold())
-            TextField("Title", text: $title)
+
+            TextField("Name / Title", text: $title)
                 .textFieldStyle(.roundedBorder)
-            TextField("Video link (YouTube…)", text: $url)
-                .textFieldStyle(.roundedBorder)
-            if let id = youtubeID {
-                YouTubeEmbedView(videoID: id)
-                    .frame(height: 180)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Picker("Type", selection: $kind) {
+                ForEach(HostedMediaKind.allCases) { k in
+                    Label(k.label, systemImage: k.symbol).tag(k)
+                }
             }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+
+            switch kind {
+            case .youtube, .link:
+                TextField("Link (\(kind == .youtube ? "YouTube…" : "https://…"))", text: $url)
+                    .textFieldStyle(.roundedBorder)
+                if let id = youtubeID {
+                    YouTubeEmbedView(videoID: id)
+                        .frame(height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            case .audio, .video, .image:
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(selectedFileURL?.lastPathComponent ?? "No local file selected")
+                            .font(.caption)
+                            .foregroundStyle(selectedFileURL == nil ? .tertiary : .primary)
+                            .lineLimit(1)
+                        Spacer()
+                        Button(selectedFileURL == nil ? "Choose File…" : "Replace…") {
+                            importingFile = true
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(8)
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+                    Text("The file is copied into the app's storage.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Text("Tags — comma separated")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextField("e.g. music, lecture, clip", text: $tags)
+                .textFieldStyle(.roundedBorder)
+
             Text("Description — markdown supported")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             TextEditor(text: $description)
                 .font(.body.monospaced())
-                .frame(height: 90)
+                .frame(height: 80)
                 .padding(6)
                 .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.gray.opacity(0.15), lineWidth: 1)
                 )
+
             HStack {
                 Button("Cancel") { dismiss() }
                 Spacer()
                 Button {
-                    onSave(title, description, url)
-                    dismiss()
+                    save()
                 } label: {
                     Label("Save", systemImage: "checkmark")
                 }
@@ -336,37 +489,74 @@ struct HostedVideoEditSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 480)
+        .frame(width: 520)
+        .fileImporter(isPresented: $importingFile, allowedContentTypes: allowedTypes) { result in
+            if case .success(let url) = result {
+                selectedFileURL = url
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    title = url.deletingPathExtension().lastPathComponent
+                }
+            }
+        }
         .onAppear {
             if let existing {
                 title = existing.title
                 description = existing.description
                 url = existing.url
+                kind = existing.kind
+                tags = existing.tags
             }
         }
     }
+
+    private var allowedTypes: [UTType] {
+        switch kind {
+        case .audio: return [.audio]
+        case .video: return [.movie, .video]
+        case .image: return [.image]
+        default: return [.item]
+        }
+    }
+
+    private func save() {
+        if let existing {
+            if let fileURL = selectedFileURL {
+                let replaced = store.addHostedLocalFileReplacing(existing: existing, from: fileURL, tags: tags, title: title, description: description)
+                if !replaced {
+                    store.updateHostedMedia(id: existing.id, title: title, description: description, url: url, kind: kind, tags: tags)
+                }
+            } else {
+                store.updateHostedMedia(id: existing.id, title: title, description: description, url: url, kind: kind, tags: tags)
+            }
+        } else {
+            if let fileURL = selectedFileURL {
+                store.addHostedLocalFile(title: title, description: description, tags: tags, from: fileURL)
+            } else {
+                store.addHostedMedia(title: title, description: description, kind: kind, url: url, tags: tags)
+            }
+        }
+        dismiss()
+    }
 }
 
-// MARK: - Detail sheet (watch + comments + nested replies)
+// MARK: - Detail sheet (play + comments + nested replies)
 
 struct HostedVideoDetailSheet: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
     let video: HostedVideo
-    let onSave: (String, String, String) -> Void
 
     @State private var editing = false
-    @State private var title = ""
-    @State private var description = ""
-    @State private var url = ""
     @State private var newComment = ""
+    @State private var player: AVPlayer?
+    @State private var isPlaying = false
 
     private var comments: [HostedVideoComment] {
         store.topLevelHostedComments(for: video.id)
     }
 
     private var renderedDescription: AttributedString? {
-        let trimmed = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = video.description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         return try? AttributedString(markdown: trimmed, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
     }
@@ -379,33 +569,12 @@ struct HostedVideoDetailSheet: View {
                 Spacer()
                 Button {
                     editing = true
-                    title = video.title
-                    description = video.description
-                    url = video.url
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
                 .buttonStyle(.bordered)
             }
-            if let id = youtubeVideoID(from: video.url) {
-                YouTubeEmbedView(videoID: id)
-                    .frame(height: 300)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else if !video.url.isEmpty {
-                HStack {
-                    Text("Not a YouTube link.")
-                        .font(.caption)
-                    Button {
-                        if let u = URL(string: video.url.hasPrefix("http") ? video.url : "https://\(video.url)") {
-                            NSWorkspace.shared.open(u)
-                        }
-                    } label: {
-                        Label("Open in browser", systemImage: "arrow.up.right.square")
-                    }
-                    .buttonStyle(.link)
-                }
-                .foregroundStyle(.secondary)
-            }
+            mediaArea
             if let rendered = renderedDescription {
                 Text(rendered)
                     .font(.callout)
@@ -415,16 +584,142 @@ struct HostedVideoDetailSheet: View {
                         return .handled
                     })
             }
-
             commentsSection
         }
         .padding(20)
         .frame(width: 560, height: 700)
         .sheet(isPresented: $editing) {
-            HostedVideoEditSheet(existing: video) { t, d, u in
-                onSave(t, d, u)
+            HostedVideoEditSheet(existing: video)
+                .environmentObject(store)
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
+        }
+    }
+
+    @ViewBuilder
+    private var mediaArea: some View {
+        switch video.kind {
+        case .youtube:
+            if let id = youtubeVideoID(from: video.url) {
+                YouTubeEmbedView(videoID: id)
+                    .frame(height: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                openLinkArea
+            }
+        case .link:
+            openLinkArea
+        case .image:
+            if let url = localFileURL, let image = NSImage(contentsOf: url) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: 320)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                emptyMediaArea
+            }
+        case .audio, .video:
+            if let url = localFileURL {
+                VStack(spacing: 8) {
+                    if video.kind == .video {
+                        VideoPlayer(player: player)
+                            .frame(height: 280)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } else {
+                        Rectangle()
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .frame(height: 90)
+                            .overlay(
+                                Image(systemName: "waveform")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(.purple)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    HStack(spacing: 16) {
+                        Button {
+                            togglePlayback()
+                        } label: {
+                            Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 30))
+                        }
+                        .buttonStyle(.borderless)
+                        Button {
+                            player?.pause()
+                            isPlaying = false
+                            player?.seek(to: .zero)
+                        } label: {
+                            Image(systemName: "backward.end.fill")
+                                .font(.system(size: 16))
+                        }
+                        .buttonStyle(.borderless)
+                        Text("\(video.kind.label) playback")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .onAppear {
+                    setupPlayer(url: url)
+                }
+            } else {
+                emptyMediaArea
             }
         }
+    }
+
+    private var openLinkArea: some View {
+        HStack {
+            Text("Link media")
+                .font(.caption)
+            Button {
+                if let u = URL(string: video.url.hasPrefix("http") ? video.url : "https://\(video.url)") {
+                    NSWorkspace.shared.open(u)
+                }
+            } label: {
+                Label("Open in browser", systemImage: "arrow.up.right.square")
+            }
+            .buttonStyle(.link)
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var emptyMediaArea: some View {
+        HStack {
+            Spacer()
+            Image(systemName: video.kind.symbol)
+                .font(.system(size: 40))
+                .foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var localFileURL: URL? {
+        guard !video.filename.isEmpty else { return nil }
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return base.appendingPathComponent("CommentTracker/HostedMedia").appendingPathComponent(video.filename)
+    }
+
+    private func setupPlayer(url: URL) {
+        if player == nil {
+            player = AVPlayer(url: url)
+        }
+    }
+
+    private func togglePlayback() {
+        guard let player else { return }
+        if isPlaying {
+            player.pause()
+        } else {
+            player.play()
+        }
+        isPlaying.toggle()
     }
 
     private var commentsSection: some View {
