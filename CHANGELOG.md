@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.30.0]
+
+### Fixed
+- **Voice Notes**: recordings are now saved to the list when you hit Stop & Save. Previously the duration was read after the recorder stopped, which returned 0 on macOS and caused the recording to be discarded instead of listed.
+
 ## [v1.29.0]
 
 ### Added

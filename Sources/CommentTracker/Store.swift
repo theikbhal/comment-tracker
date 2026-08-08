@@ -2902,22 +2902,27 @@ final class Store: ObservableObject {
     @discardableResult
     func stopRecordingAudioNote() -> Int? {
         guard let recorder = audioRecorder else { return nil }
+        let duration = recorder.currentTime
         recorder.stop()
         audioRecorder = nil
         isRecordingAudio = false
         recordingStartedAt = nil
         recordingAudioTime = 0
-        let duration = recorder.currentTime
         let filename = currentRecordingFilename ?? ""
         currentRecordingFilename = nil
         let url = audioDirectoryURL.appendingPathComponent(filename)
-        if filename.isEmpty || duration < 1 {
+        guard !filename.isEmpty else { return nil }
+        var resolvedDuration = duration
+        if resolvedDuration <= 0 {
+            resolvedDuration = (try? AVAudioPlayer(contentsOf: url))?.duration ?? 0
+        }
+        if resolvedDuration <= 0.05 {
             try? FileManager.default.removeItem(at: url)
             return nil
         }
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, h:mm a"
-        return addAudioNote(title: "Voice note — \(formatter.string(from: Date()))", notes: "", filename: filename, duration: duration)
+        return addAudioNote(title: "Voice note — \(formatter.string(from: Date()))", notes: "", filename: filename, duration: resolvedDuration)
     }
 
     func cancelRecordingAudioNote() {
