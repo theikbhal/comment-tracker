@@ -79,6 +79,7 @@ final class Store: ObservableObject {
     @Published var airtableCells: [AirtableCell] = []
     @Published var hostedVideos: [HostedVideo] = []
     @Published var hostedVideoComments: [HostedVideoComment] = []
+    @Published var ytDownloads: [YTDownload] = []
     @Published var redditPosts: [RedditPost] = []
     @Published var redditComments: [RedditComment] = []
     @Published var roadmap: [RoadmapItem] = []
@@ -253,6 +254,7 @@ final class Store: ObservableObject {
         airtableCells = loadAirtableCells()
         hostedVideos = loadHostedVideos()
         hostedVideoComments = loadHostedVideoComments()
+        ytDownloads = loadYTDownloads()
         redditPosts = loadRedditPosts()
         redditComments = loadRedditComments()
         events = loadEvents()
@@ -5567,6 +5569,225 @@ final class Store: ObservableObject {
         _ = db.execute("DELETE FROM hosted_video_comments WHERE id = ?", [id])
         _ = db.execute("DELETE FROM hosted_video_comments WHERE parent_id = ?", [id])
         refresh()
+    }
+
+    // MARK: - YouTube Downloader
+
+    private var ytProcesses: [Int: Process] = [:]
+
+    private func loadYTDownloads() -> [YTDownload] {
+        db.query("SELECT * FROM yt_downloads ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let url = row["url"] as? String,
+                let title = row["title"] as? String,
+                let mode = row["mode"] as? String,
+                let outputDir = row["output_dir"] as? String,
+                let filePath = row["file_path"] as? String,
+                let status = row["status"] as? String,
+                let progress = row["progress"] as? Double,
+                let error = row["error"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return YTDownload(
+                id: id,
+                url: url,
+                title: title,
+                mode: mode,
+                outputDir: outputDir,
+                filePath: filePath,
+                status: status,
+                progress: progress,
+                error: error,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    var sortedYTDownloads: [YTDownload] {
+        ytDownloads.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    @discardableResult
+    func startYTDownload(url rawURL: String, options: YTDownloadOptions, outputDir: String) -> Int? {
+        let url = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty else { return nil }
+
+        let base = outputDir.isEmpty ? "~/Downloads/CommentTracker" : outputDir
+        let expanded = NSString(string: base).expandingTildeInPath
+        var isDir: ObjCBool = false
+        if !FileManager.default.fileExists(atPath: expanded, isDirectory: &isDir) {
+            try? FileManager.default.createDirectory(atPath: expanded, withIntermediateDirectories: true)
+        }
+
+        var doAudio = options.includeAudio
+        var doVideo = options.includeVideo
+        let doCaptions = options.includeCaptions
+        let doDesc = options.includeDescription
+        let doComments = options.includeComments
+
+        if !doAudio && !doVideo {
+            doVideo = true
+        }
+
+        let metadataFlags: [String] = {
+            var flags: [String] = []
+            if doCaptions {
+                flags += ["--write-subs", "--write-auto-subs", "--sub-langs", "all"]
+            }
+            if doDesc {
+                flags += ["--write-description"]
+            }
+            if doComments {
+                flags += ["--write-comments"]
+            }
+            return flags
+        }()
+
+        var passSets: [[String]] = []
+
+        if doVideo {
+            var args = ["-f", "bv*+ba/b", "--merge-output-format", "mp4"]
+            args += metadataFlags
+            args += ["--no-progress", "-o", "\(expanded)/%(title).80s.%(ext)s", url]
+            passSets.append(args)
+        }
+
+        if doAudio {
+            var args = ["-f", "ba", "-x", "--audio-format", "mp3", "--audio-quality", "0"]
+            args += metadataFlags
+            args += ["--no-progress", "-o", "\(expanded)/%(title).80s.%(ext)s", url]
+            passSets.append(args)
+        }
+
+        guard !passSets.isEmpty else { return nil }
+
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO yt_downloads (url, title, mode, output_dir, file_path, status, progress, error, created_at, updated_at) VALUES (?, '', ?, ?, '', 'downloading', 0, '', ?, ?)",
+            [url, options.modeSummary, expanded, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+
+        runYTPasses(id: id, passSets: passSets, passIndex: 0)
+        return id
+    }
+
+    private func runYTPasses(id: Int, passSets: [[String]], passIndex: Int) {
+        guard passIndex < passSets.count else {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.ytProcesses[id] = nil
+                _ = self.db.execute(
+                    "UPDATE yt_downloads SET status = 'done', progress = 1, updated_at = ? WHERE id = ?",
+                    [Date().timeIntervalSince1970, id]
+                )
+                self.refresh()
+            }
+            return
+        }
+
+        let args = passSets[passIndex]
+        let yt = Process()
+        yt.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/yt-dlp")
+        yt.arguments = args
+        let pipe = Pipe()
+        yt.standardOutput = pipe
+        yt.standardError = pipe
+        ytProcesses[id] = yt
+
+        let passCount = passSets.count
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            guard let output = String(data: data, encoding: .utf8) else { return }
+            var progress: Double? = nil
+            for line in output.components(separatedBy: .newlines) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("[download]"), let p = Self.parseProgress(trimmed) {
+                    progress = p
+                } else if trimmed.hasPrefix("[Merger]") {
+                    progress = 1.0
+                }
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let progress {
+                    let overall = (Double(passIndex) + progress) / Double(passCount)
+                    self.updateYTProgress(id: id, progress: overall)
+                }
+            }
+        }
+
+        yt.terminationHandler = { [weak self] process in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let succeeded = process.terminationStatus == 0
+                if succeeded {
+                    self.runYTPasses(id: id, passSets: passSets, passIndex: passIndex + 1)
+                } else {
+                    self.ytProcesses[id] = nil
+                    _ = self.db.execute(
+                        "UPDATE yt_downloads SET status = 'failed', error = ?, updated_at = ? WHERE id = ?",
+                        ["yt-dlp exited with code \(process.terminationStatus)", Date().timeIntervalSince1970, id]
+                    )
+                    self.refresh()
+                }
+            }
+        }
+
+        do {
+            try yt.run()
+        } catch {
+            self.ytProcesses[id] = nil
+            _ = db.execute("UPDATE yt_downloads SET status = 'failed', error = ?, updated_at = ? WHERE id = ?", [error.localizedDescription, Date().timeIntervalSince1970, id])
+            refresh()
+        }
+    }
+
+    nonisolated private static func parseProgress(_ line: String) -> Double? {
+        guard let range = line.range(of: "\\d+\\.?\\d*%", options: .regularExpression) else { return nil }
+        let percent = String(line[range]).replacingOccurrences(of: "%", with: "")
+        guard let value = Double(percent) else { return nil }
+        return min(max(value / 100.0, 0), 1)
+    }
+
+    func updateYTProgress(id: Int, progress: Double) {
+        guard let index = ytDownloads.firstIndex(where: { $0.id == id }) else { return }
+        ytDownloads[index].progress = progress
+        _ = db.execute("UPDATE yt_downloads SET progress = ?, updated_at = ? WHERE id = ?", [progress, Date().timeIntervalSince1970, id])
+    }
+
+    func cancelYTDownload(_ id: Int) {
+        ytProcesses[id]?.terminate()
+        ytProcesses[id] = nil
+        _ = db.execute("UPDATE yt_downloads SET status = 'failed', error = 'Cancelled', updated_at = ? WHERE id = ?", [Date().timeIntervalSince1970, id])
+        refresh()
+    }
+
+    func deleteYTDownload(_ id: Int) {
+        ytProcesses[id]?.terminate()
+        ytProcesses[id] = nil
+        _ = db.execute("DELETE FROM yt_downloads WHERE id = ?", [id])
+        refresh()
+    }
+
+    func revealYTDownload(_ d: YTDownload) {
+        let dir = NSString(string: d.outputDir).expandingTildeInPath
+        var url = URL(fileURLWithPath: dir, isDirectory: true)
+        if FileManager.default.fileExists(atPath: d.filePath) {
+            url = URL(fileURLWithPath: d.filePath)
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    func ytDownload(_ d: YTDownload, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return d.url.lowercased().contains(q) || d.title.lowercased().contains(q) || d.mode.lowercased().contains(q)
     }
 
     // MARK: - Mini Reddit

@@ -47,6 +47,7 @@ struct HelpView: View {
                 tableTrackerCard
                 airtableCard
                 miniVideosCard
+                ytDownloaderCard
                 redditCard
                 eventsCard
                 treeCard
@@ -436,6 +437,17 @@ struct HelpView: View {
             Label("Reddit — your own little community", systemImage: "bubble.left.and.bubble.right.fill")
                 .font(.headline)
             Text("Post threads with a title, markdown body, and a sub tag. Upvote and downvote, and open any post for a comments feed with nested reply threads.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var ytDownloaderCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("YouTube Downloader — save videos locally", systemImage: "arrow.down.circle.fill")
+                .font(.headline)
+            Text("Paste a YouTube link and pick what to save: the video (mp4), the audio (mp3), captions, the description, and the comments — any combination. Files are saved into a folder you choose (default ~/Downloads/CommentTracker) and download history is tracked with progress. Requires yt-dlp and ffmpeg, which are bundled on this Mac.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

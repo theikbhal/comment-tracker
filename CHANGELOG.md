@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.44.0]
+
+### Added
+- **YouTube Downloader**: paste any video URL and pick what to save — the video (mp4), the audio (mp3), captions, the description, and the comments, in any combination. Files are saved into a folder you choose (default `~/Downloads/CommentTracker`), with live progress and a full download history (open in Finder, cancel, remove). Powered by yt-dlp + ffmpeg.
+
 ## [v1.43.0]
 
 ### Added

@@ -157,6 +157,10 @@ struct GlobalSearchView: View {
         store.redditPosts.filter { store.redditPost($0, matches: query) }
     }
 
+    private var ytDownloadResults: [YTDownload] {
+        store.ytDownloads.filter { store.ytDownload($0, matches: query) }
+    }
+
     private var eventResults: [EventShow] {
         store.events.filter { store.eventShow($0, matches: query) }
     }
@@ -502,6 +506,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if ytDownloadResults.count > 0 {
+                        section("YT Downloads", icon: "arrow.down.circle.fill") {
+                            ForEach(ytDownloadResults) { d in
+                                row(icon: "arrow.down.circle.fill", color: .red, title: d.title.isEmpty ? d.url : d.title, subtitle: d.mode) {
+                                    dismiss()
+                                    onNavigate(.ytdl)
+                                }
+                            }
+                        }
+                    }
                     if eventResults.count > 0 {
                         section("Events", icon: "calendar.badge.clock") {
                             ForEach(eventResults) { e in
@@ -733,7 +747,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && backgroundResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && ytDownloadResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && bigCardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && backgroundResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -810,6 +824,7 @@ struct GlobalSearchView: View {
             "\(airtableResults.count) airtables",
             "\(hostedVideoResults.count) media",
             "\(redditResults.count) posts",
+            "\(ytDownloadResults.count) downloads",
             "\(eventResults.count) events",
             "\(treeResults.count) branches",
             "\(faqResults.count) faqs",

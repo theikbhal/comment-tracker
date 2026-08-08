@@ -1143,8 +1143,41 @@ struct HostedVideoComment: Identifiable, Equatable {
     var parentId: Int?
     var body: String
     var createdAt: Date
-
     var isReply: Bool { parentId != nil }
+}
+
+struct YTDownload: Identifiable, Equatable {
+    let id: Int
+    var url: String
+    var title: String
+    var mode: String
+    var outputDir: String
+    var filePath: String
+    var status: String
+    var progress: Double
+    var error: String
+    var createdAt: Date
+    var updatedAt: Date
+
+    var isFinished: Bool { status == "done" || status == "failed" }
+}
+
+struct YTDownloadOptions: Equatable {
+    var includeAudio = false
+    var includeVideo = false
+    var includeCaptions = false
+    var includeDescription = false
+    var includeComments = false
+
+    var modeSummary: String {
+        var parts: [String] = []
+        if includeVideo { parts.append("Video") }
+        if includeAudio { parts.append("Audio") }
+        if includeCaptions { parts.append("Captions") }
+        if includeDescription { parts.append("Description") }
+        if includeComments { parts.append("Comments") }
+        return parts.isEmpty ? "Default" : parts.joined(separator: " + ")
+    }
 }
 
 // MARK: - Mini Reddit
