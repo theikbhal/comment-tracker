@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.39.1]
+
+### Fixed
+- **Global Search layout**: the result-count summary no longer overflows the sheet and clips — it now wraps onto multiple lines and only shows counts that are non-zero. Result titles/subtitles ellipsize cleanly instead of being cut off.
+
 ## [v1.39.0]
 
 ### Added

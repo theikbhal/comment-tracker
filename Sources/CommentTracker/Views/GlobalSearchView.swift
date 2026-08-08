@@ -734,98 +734,63 @@ struct GlobalSearchView: View {
         }
     }
 
+    private var summaryText: String {
+        [
+            "\(trackerResults.count) trackers",
+            "\(personResults.count) people",
+            "\(videoResults.count) videos",
+            "\(thoughtResults.count) thoughts",
+            "\(winResults.count) wins",
+            "\(failResults.count) fails",
+            "\(noteResults.count) notes",
+            "\(buckResults.count) buckets",
+            "\(focusResults.count) focus",
+            "\(parallelResults.count) parallel",
+            "\(projectResults.count) projects",
+            "\(longTermResults.count) long-term",
+            "\(deepWorkResults.count) deep work",
+            "\(scheduleResults.count) schedule",
+            "\(holdingResults.count) holding",
+            "\(urgentResults.count) urgent",
+            "\(mindMapResults.count + mindMapNodeResults.count) mind map",
+            "\(blogResults.count) blog",
+            "\(slackChannelResults.count + slackMessageResults.count) slack",
+            "\(calendarResults.count) calendar",
+            "\(yearResults.count) year",
+            "\(weekResults.count) weeks",
+            "\(challengeResults.count) challenges",
+            "\(roadmapResults.count) roadmap",
+            "\(alarmResults.count) alarms",
+            "\(toolResults.count) tools",
+            "\(dreamResults.count) dreams",
+            "\(featureResults.count) requests",
+            "\(tableResults.count) tables",
+            "\(airtableResults.count) airtables",
+            "\(hostedVideoResults.count) videos",
+            "\(redditResults.count) posts",
+            "\(eventResults.count) events",
+            "\(treeResults.count) branches",
+            "\(faqResults.count) faqs",
+            "\(celebrationResults.count) celebrations",
+            "\(pendingResults.count) pending",
+            "\(dietResults.count) diet",
+            "\(familyResults.count) family",
+            "\(followUpResults.count) follow-ups",
+            "\(inspirationResults.count) inspiration",
+            "\(cardResults.count) cards",
+            "\(stackResults.count) stack items",
+            "\(sprintResults.count) sprints"
+        ]
+        .filter { !$0.hasPrefix("0 ") }
+        .joined(separator: "  ·  ")
+    }
+
     private var summaryRow: some View {
-        HStack(spacing: 8) {
-            Text("\(trackerResults.count) trackers")
-            Text("·")
-            Text("\(personResults.count) people")
-            Text("·")
-            Text("\(videoResults.count) videos")
-            Text("·")
-            Text("\(thoughtResults.count) thoughts")
-            Text("·")
-            Text("\(winResults.count) wins")
-            Text("·")
-            Text("\(failResults.count) fails")
-            Text("·")
-            Text("\(noteResults.count) notes")
-            Text("·")
-            Text("\(buckResults.count) buckets")
-            Text("·")
-            Text("\(focusResults.count) focus")
-            Text("·")
-            Text("\(parallelResults.count) parallel")
-            Text("·")
-            Text("\(projectResults.count) projects")
-            Text("·")
-            Text("\(longTermResults.count) long-term")
-            Text("·")
-            Text("\(deepWorkResults.count) deep work")
-            Text("·")
-            Text("\(scheduleResults.count) schedule")
-            Text("·")
-            Text("\(holdingResults.count) holding")
-            Text("·")
-            Text("\(urgentResults.count) urgent")
-            Text("·")
-            Text("\(mindMapResults.count + mindMapNodeResults.count) mind map")
-            Text("·")
-            Text("\(blogResults.count) blog")
-            Text("·")
-            Text("\(slackChannelResults.count + slackMessageResults.count) slack")
-            Text("·")
-            Text("\(calendarResults.count) calendar")
-            Text("·")
-            Text("\(yearResults.count) year")
-            Text("·")
-            Text("\(weekResults.count) weeks")
-            Text("·")
-            Text("\(challengeResults.count) challenges")
-            Text("·")
-            Text("\(roadmapResults.count) roadmap")
-            Text("·")
-            Text("\(alarmResults.count) alarms")
-            Text("·")
-            Text("\(toolResults.count) tools")
-            Text("·")
-            Text("\(dreamResults.count) dreams")
-            Text("·")
-            Text("\(featureResults.count) requests")
-            Text("·")
-            Text("\(tableResults.count) tables")
-            Text("·")
-            Text("\(airtableResults.count) airtables")
-            Text("·")
-            Text("\(hostedVideoResults.count) videos")
-            Text("·")
-            Text("\(redditResults.count) posts")
-            Text("·")
-            Text("\(eventResults.count) events")
-            Text("·")
-            Text("\(treeResults.count) branches")
-            Text("·")
-            Text("\(faqResults.count) faqs")
-            Text("·")
-            Text("\(celebrationResults.count) celebrations")
-            Text("·")
-            Text("\(pendingResults.count) pending")
-            Text("·")
-            Text("\(dietResults.count) diet")
-            Text("·")
-            Text("\(familyResults.count) family")
-            Text("·")
-            Text("\(followUpResults.count) follow-ups")
-            Text("·")
-            Text("\(inspirationResults.count) inspiration")
-            Text("·")
-            Text("\(cardResults.count) cards")
-            Text("·")
-            Text("\(stackResults.count) stack items")
-            Text("·")
-            Text("\(sprintResults.count) sprints")
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        Text(summaryText)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func section<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
@@ -855,9 +820,15 @@ struct GlobalSearchView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 Image(systemName: "arrow.turn.down.right")
