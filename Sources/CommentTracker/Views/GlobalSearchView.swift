@@ -65,6 +65,10 @@ struct GlobalSearchView: View {
         store.projects.filter { store.project($0, matches: query) }
     }
 
+    private var longTermResults: [LongTermProject] {
+        store.longTermProjects.filter { store.longTermProject($0, matches: query) }
+    }
+
     private var deepWorkResults: [DeepWorkSession] {
         store.deepWork.filter { store.deepWork($0, matches: query) }
     }
@@ -256,6 +260,16 @@ struct GlobalSearchView: View {
                                 row(icon: "shippingbox.fill", color: pr.status.color, title: pr.name, subtitle: "Project · \(pr.status.displayName)") {
                                     dismiss()
                                     onNavigate(.projects)
+                                }
+                            }
+                        }
+                    }
+                    if longTermResults.count > 0 {
+                        section("Long Term Projects", icon: "mountain.2.fill") {
+                            ForEach(longTermResults) { lt in
+                                row(icon: "mountain.2.fill", color: lt.status.color, title: lt.title, subtitle: "\(lt.status.label) · \(lt.progress)% · \(store.milestones(for: lt.id).count) milestones") {
+                                    dismiss()
+                                    onNavigate(.longterm)
                                 }
                             }
                         }
@@ -662,7 +676,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -728,6 +742,8 @@ struct GlobalSearchView: View {
             Text("\(parallelResults.count) parallel")
             Text("·")
             Text("\(projectResults.count) projects")
+            Text("·")
+            Text("\(longTermResults.count) long-term")
             Text("·")
             Text("\(deepWorkResults.count) deep work")
             Text("·")

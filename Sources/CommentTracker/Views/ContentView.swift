@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, voice, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, voice, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -13,6 +13,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .urgent: return "Urgent"
         case .holding: return "Holding Hand"
         case .projects: return "Projects"
+        case .longterm: return "Long Term Projects"
         case .schedule: return "Schedule"
         case .mindmap: return "Mind Map"
         case .blog: return "Blog"
@@ -66,6 +67,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .urgent: return "flame.fill"
         case .holding: return "hand.raised.fill"
         case .projects: return "shippingbox.fill"
+        case .longterm: return "mountain.2.fill"
         case .schedule: return "calendar.badge.clock"
         case .mindmap: return "point.3.connected.trianglepath.dotted"
         case .blog: return "newspaper.fill"
@@ -177,6 +179,7 @@ struct ContentView: View {
         case .urgent: UrgentView()
         case .holding: HoldingView()
         case .projects: ProjectTrackerView()
+        case .longterm: LongTermProjectsView()
         case .schedule: ScheduleView()
         case .mindmap: MiniMindMapView()
         case .blog: BlogView()

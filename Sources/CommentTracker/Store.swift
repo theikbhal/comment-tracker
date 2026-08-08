@@ -36,6 +36,8 @@ final class Store: ObservableObject {
     @Published var focusSessions: [Focus] = []
     @Published var parallel: [ParallelItem] = []
     @Published var projects: [Project] = []
+    @Published var longTermProjects: [LongTermProject] = []
+    @Published var longTermMilestones: [LongTermMilestone] = []
     @Published var deepWork: [DeepWorkSession] = []
     @Published var schedule: [ScheduleEntry] = []
     @Published var holding: [HoldingItem] = []
@@ -191,6 +193,8 @@ final class Store: ObservableObject {
         focusSessions = loadFocus()
         parallel = loadParallel()
         projects = loadProjects()
+        longTermProjects = loadLongTermProjects()
+        longTermMilestones = loadLongTermMilestones()
         deepWork = loadDeepWork()
         deepWorkTasks = loadDeepWorkTasks()
         schedule = loadSchedule()
@@ -892,6 +896,157 @@ final class Store: ObservableObject {
 
     func deleteProject(_ id: Int) {
         _ = db.execute("DELETE FROM projects WHERE id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - Long Term Projects
+
+    private func loadLongTermProjects() -> [LongTermProject] {
+        db.query("SELECT * FROM long_term_projects ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let statusRaw = row["status"] as? String,
+                let status = LongTermProjectStatus(rawValue: statusRaw),
+                let description = row["description"] as? String,
+                let nextAction = row["next_action"] as? String,
+                let progress = row["progress"] as? Int,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return LongTermProject(
+                id: id,
+                title: title,
+                status: status,
+                description: description,
+                nextAction: nextAction,
+                progress: progress,
+                startedAt: (row["started_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                targetAt: (row["target_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadLongTermMilestones() -> [LongTermMilestone] {
+        db.query("SELECT * FROM long_term_milestones ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let projectID = row["project_id"] as? Int,
+                let title = row["title"] as? String,
+                let done = row["done"] as? Int,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return LongTermMilestone(
+                id: id,
+                projectId: projectID,
+                title: title,
+                done: done == 1,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func longTermProject(_ p: LongTermProject, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return p.title.lowercased().contains(q) || p.description.lowercased().contains(q) || p.nextAction.lowercased().contains(q)
+    }
+
+    func milestones(for projectID: Int) -> [LongTermMilestone] {
+        longTermMilestones.filter { $0.projectId == projectID }.sorted { $0.position < $1.position }
+    }
+
+    @discardableResult
+    func addLongTermProject(title: String, description: String, nextAction: String, status: LongTermProjectStatus, startedAt: Date?, targetAt: Date?) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO long_term_projects (title, status, description, next_action, progress, started_at, target_at, position, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)",
+            [trimmed, status.rawValue, description, nextAction, startedAt?.timeIntervalSince1970, targetAt?.timeIntervalSince1970, longTermProjects.count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateLongTermProject(id: Int, title: String, description: String, nextAction: String, status: LongTermProjectStatus, progress: Int, startedAt: Date?, targetAt: Date?) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE long_term_projects SET title = ?, status = ?, description = ?, next_action = ?, progress = ?, started_at = ?, target_at = ?, updated_at = ? WHERE id = ?",
+            [trimmed, status.rawValue, description, nextAction, min(max(progress, 0), 100), startedAt?.timeIntervalSince1970, targetAt?.timeIntervalSince1970, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func setLongTermProjectProgress(id: Int, progress: Int) {
+        let clamped = min(max(progress, 0), 100)
+        _ = db.execute(
+            "UPDATE long_term_projects SET progress = ?, updated_at = ? WHERE id = ?",
+            [clamped, Date().timeIntervalSince1970, id]
+        )
+        if let index = longTermProjects.firstIndex(where: { $0.id == id }) {
+            longTermProjects[index].progress = clamped
+            longTermProjects[index].updatedAt = Date()
+        }
+    }
+
+    func moveLongTermProject(id: Int, direction: Int) {
+        guard let index = longTermProjects.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < longTermProjects.count else { return }
+        let other = longTermProjects[target]
+        _ = db.execute("UPDATE long_term_projects SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE long_term_projects SET position = ?, updated_at = ? WHERE id = ?", [longTermProjects[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteLongTermProject(_ id: Int) {
+        _ = db.execute("DELETE FROM long_term_projects WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM long_term_milestones WHERE project_id = ?", [id])
+        refresh()
+    }
+
+    @discardableResult
+    func addLongTermMilestone(projectID: Int, title: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let count = milestones(for: projectID).count
+        _ = db.execute(
+            "INSERT INTO long_term_milestones (project_id, title, done, position, created_at) VALUES (?, ?, 0, ?, ?)",
+            [projectID, trimmed, count, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func toggleLongTermMilestone(id: Int) {
+        guard let milestone = longTermMilestones.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE long_term_milestones SET done = ? WHERE id = ?", [milestone.done ? 0 : 1, id])
+        refresh()
+    }
+
+    func moveLongTermMilestone(id: Int, projectID: Int, direction: Int) {
+        let list = milestones(for: projectID)
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE long_term_milestones SET position = ? WHERE id = ?", [other.position, id])
+        _ = db.execute("UPDATE long_term_milestones SET position = ? WHERE id = ?", [list[index].position, other.id])
+        refresh()
+    }
+
+    func deleteLongTermMilestone(_ id: Int) {
+        _ = db.execute("DELETE FROM long_term_milestones WHERE id = ?", [id])
         refresh()
     }
 

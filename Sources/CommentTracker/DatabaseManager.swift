@@ -158,6 +158,27 @@ final class DatabaseManager {
             position INTEGER NOT NULL DEFAULT 0,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS long_term_projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            description TEXT NOT NULL DEFAULT '',
+            next_action TEXT NOT NULL DEFAULT '',
+            progress INTEGER NOT NULL DEFAULT 0,
+            started_at REAL,
+            target_at REAL,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS long_term_milestones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS schedule (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             day INTEGER NOT NULL,

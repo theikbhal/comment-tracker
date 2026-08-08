@@ -523,6 +523,52 @@ let deepWorkPresets: [Int] = [15, 30, 45, 60, 90, 120]
 let deepWorkSoundPresets = ["Glass", "Tink", "Funk", "Ping", "Pop", "Bottle", "Frog", "Hero", "Morse", "Purr", "Sosumi", "Submarine", "Basso", "Blow"]
 let deepWorkSoundDurations = [1, 5, 10, 30, 60]
 
+enum LongTermProjectStatus: String, CaseIterable, Identifiable {
+    case planning, active, paused, done
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .planning: return "Planning"
+        case .active: return "Active"
+        case .paused: return "Paused"
+        case .done: return "Done"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .planning: return .gray
+        case .active: return .blue
+        case .paused: return .orange
+        case .done: return .green
+        }
+    }
+}
+
+struct LongTermProject: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var status: LongTermProjectStatus
+    var description: String
+    var nextAction: String
+    var progress: Int
+    var startedAt: Date?
+    var targetAt: Date?
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct LongTermMilestone: Identifiable, Equatable {
+    let id: Int
+    var projectId: Int
+    var title: String
+    var done: Bool
+    var position: Int
+    var createdAt: Date
+}
+
 // MARK: - Weekly Schedule
 
 let scheduleSlotNames = ["Morning", "Noon", "Afternoon", "Evening"]

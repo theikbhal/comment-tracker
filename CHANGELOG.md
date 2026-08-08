@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.37.0]
+
+### Added
+- **Long Term Projects**: track the big ongoing projects you keep coming back to. Each project has a status (planning, active, paused, done), an overall progress slider, a "next action" line, optional start and target dates, and its own checkable milestone list with up/down reordering. Reorder, edit, and delete projects anytime (deleting removes its milestones too). Projects also appear in Global Search.
+
 ## [v1.36.0]
 
 ### Changed

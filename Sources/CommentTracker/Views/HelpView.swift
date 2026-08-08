@@ -52,6 +52,7 @@ struct HelpView: View {
                 treeCard
                 faqCard
                 celebrationsCard
+                longTermCard
                 pendingCard
                 dietCard
                 familyCard
@@ -475,6 +476,17 @@ struct HelpView: View {
             Label("Celebrations — collect the wins you replay", systemImage: "party.popper.fill")
                 .font(.headline)
             Text("Collect videos worth remembering and replay them right in the app. Take markdown notes at the video level, keep an overview note for the whole collection, and comment on each video.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var longTermCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Long Term Projects — the work you keep coming back to", systemImage: "mountain.2.fill")
+                .font(.headline)
+            Text("Track big ongoing projects with a status (planning, active, paused, done), an overall progress bar, the next action to take, target dates, and a checkable milestone list. Edit, reorder, and delete projects anytime.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
