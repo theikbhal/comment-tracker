@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.39.0]
+
+### Added
+- **Stacks**: push items (1–3 words) onto color-coded stacks, pop the top item to the built-in Uncategorized stack, and add/recolor/rename as many stacks as you like. Double-click any item to open a detail sheet with description, links, and Trello-style comments (newest first). Items are also searchable from Global Search.
+
 ## [v1.38.0]
 
 ### Added

@@ -90,6 +90,9 @@ final class Store: ObservableObject {
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
+    @Published var stacks: [Stack] = []
+    @Published var stackItems: [StackItem] = []
+    @Published var stackComments: [StackComment] = []
     @Published var pomodoros: [PomodoroSession] = []
     @Published var sprints: [Sprint] = []
     @Published var stories: [Story] = []
@@ -248,6 +251,9 @@ final class Store: ObservableObject {
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
+        stacks = loadStacks()
+        stackItems = loadStackItems()
+        stackComments = loadStackComments()
         pomodoros = loadPomodoros()
         sprints = loadSprints()
         stories = loadStories()
@@ -1846,6 +1852,135 @@ final class Store: ObservableObject {
         return added
     }
 
+    // MARK: - Stacks (push / pop)
+
+    func uncategorizedStack() -> Stack? {
+        stacks.first { $0.name == "Uncategorized" } ?? stacks.first
+    }
+
+    func items(in stackID: Int) -> [StackItem] {
+        stackItems.filter { $0.stackId == stackID }.sorted { $0.position < $1.position }
+    }
+
+    func stackItem(_ item: StackItem, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if item.title.lowercased().contains(q) { return true }
+        if item.description.lowercased().contains(q) { return true }
+        return false
+    }
+
+    func stackComments(for itemID: Int) -> [StackComment] {
+        stackComments.filter { $0.itemId == itemID }.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    @discardableResult
+    func addStack(name: String, color: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO stacks (name, color, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            [trimmed, color, stacks.count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateStack(id: Int, name: String, color: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE stacks SET name = ?, color = ?, updated_at = ? WHERE id = ?",
+            [trimmed, color, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteStack(_ id: Int) {
+        _ = db.execute("DELETE FROM stacks WHERE id = ?", [id])
+        let orphanIDs = stackItems.filter { $0.stackId == id }.map(\.id)
+        _ = db.execute("DELETE FROM stack_items WHERE stack_id = ?", [id])
+        for itemID in orphanIDs {
+            _ = db.execute("DELETE FROM stack_comments WHERE item_id = ?", [itemID])
+        }
+        refresh()
+    }
+
+    func moveStack(id: Int, direction: Int) {
+        guard let index = stacks.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < stacks.count else { return }
+        let other = stacks[target]
+        _ = db.execute("UPDATE stacks SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE stacks SET position = ?, updated_at = ? WHERE id = ?", [stacks[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    @discardableResult
+    func pushStackItem(stackID: Int, title: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let count = items(in: stackID).count
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO stack_items (stack_id, title, description, links, position, created_at, updated_at) VALUES (?, ?, '', '', ?, ?, ?)",
+            [stackID, trimmed, count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateStackItem(id: Int, title: String, description: String, links: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE stack_items SET title = ?, description = ?, links = ?, updated_at = ? WHERE id = ?",
+            [trimmed, description, links, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteStackItem(_ id: Int) {
+        _ = db.execute("DELETE FROM stack_items WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM stack_comments WHERE item_id = ?", [id])
+        refresh()
+    }
+
+    @discardableResult
+    func popStackItem(id: Int) -> Int? {
+        guard let item = stackItems.first(where: { $0.id == id }) else { return nil }
+        guard let target = uncategorizedStack() else { return nil }
+        _ = db.execute(
+            "UPDATE stack_items SET stack_id = ?, position = ?, updated_at = ? WHERE id = ?",
+            [target.id, items(in: target.id).count, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+        return target.id
+    }
+
+    func popTopItem(from stackID: Int) -> Int? {
+        guard let top = items(in: stackID).first else { return nil }
+        return popStackItem(id: top.id)
+    }
+
+    func addStackComment(itemID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO stack_comments (item_id, body, created_at) VALUES (?, ?, ?)",
+            [itemID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteStackComment(_ id: Int) {
+        _ = db.execute("DELETE FROM stack_comments WHERE id = ?", [id])
+        refresh()
+    }
+
     // MARK: - Pomodoro
 
     var focusSessionsToday: Int {
@@ -2498,8 +2633,66 @@ final class Store: ObservableObject {
         }
     }
 
-    private func loadPomodoros() -> [PomodoroSession] {
-        db.query("SELECT * FROM pomodoro_sessions ORDER BY started_at DESC").compactMap { row in
+    private func loadStacks() -> [Stack] {
+        db.query("SELECT * FROM stacks ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let color = row["color"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return Stack(
+                id: id,
+                name: name,
+                color: color,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadStackItems() -> [StackItem] {
+        db.query("SELECT * FROM stack_items ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let stackID = row["stack_id"] as? Int,
+                let title = row["title"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return StackItem(
+                id: id,
+                stackId: stackID,
+                title: title,
+                description: row["description"] as? String ?? "",
+                links: row["links"] as? String ?? "",
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
+            )
+        }
+    }
+
+    private func loadStackComments() -> [StackComment] {
+        db.query("SELECT * FROM stack_comments ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let itemID = row["item_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return StackComment(
+                id: id,
+                itemId: itemID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadPomodoros() -> [PomodoroSession] {        db.query("SELECT * FROM pomodoro_sessions ORDER BY started_at DESC").compactMap { row in
             guard let id = row["id"] as? Int, let modeRaw = row["mode"] as? String, let mode = PomodoroMode(rawValue: modeRaw), let created = row["started_at"] as? Double else { return nil }
             return PomodoroSession(id: id, mode: mode, startedAt: Date(timeIntervalSince1970: created), endedAt: (row["ended_at"] as? Double).map { Date(timeIntervalSince1970: $0) })
         }

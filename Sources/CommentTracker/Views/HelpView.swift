@@ -66,6 +66,7 @@ struct HelpView: View {
                 notesCard
                 linksCard
                 cardsCard
+                stacksCard
                 pomodoroCard
                 sprintsCard
                 videosCard
@@ -673,6 +674,17 @@ private var cardsCard: some View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text("“Add 313 empty” tops the deck up to 313 blank cards to fill in. “Reset” wipes the deck and gives you a fresh set of 313 empty cards. “Hide empty” keeps the grid clean.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var stacksCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Stacks — push, pop, and organize", systemImage: "rectangle.stack.fill")
+                .font(.headline)
+            Text("Color-coded stacks you can push one-word items onto. Type up to 3 words and hit Enter to push to the top; Pop moves the top item to the built-in Uncategorized stack. Double-click any item to open its detail: description, links, and Trello-style comments with the newest at the top. Add and recolor as many stacks as you like.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

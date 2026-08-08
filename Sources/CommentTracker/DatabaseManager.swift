@@ -584,6 +584,30 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS stacks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            color TEXT NOT NULL DEFAULT 'blue',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS stack_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stack_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            links TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS stack_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id INTEGER NOT NULL,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS pomodoro_sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             mode TEXT NOT NULL,
@@ -652,6 +676,7 @@ final class DatabaseManager {
         ensureColumn(table: "audio_notes", column: "notes", definition: "TEXT NOT NULL DEFAULT ''")
         ensureColumn(table: "deepwork_sessions", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
         ensureColumn(table: "long_term_projects", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
+        _ = execute("INSERT OR IGNORE INTO stacks (name, color, position, created_at, updated_at) VALUES ('Uncategorized', 'gray', 0, 0, 0)")
     }
 
     private func ensureColumn(table: String, column: String, definition: String) {

@@ -197,6 +197,10 @@ struct GlobalSearchView: View {
         store.cards.filter { store.card($0, matches: query) }
     }
 
+    private var stackResults: [StackItem] {
+        store.stackItems.filter { store.stackItem($0, matches: query) }
+    }
+
     private var sprintResults: [Sprint] {
         store.sprints.filter { store.sprint($0, matches: query) }
     }
@@ -656,6 +660,17 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if stackResults.count > 0 {
+                        section("Stacks", icon: "rectangle.stack.fill") {
+                            ForEach(stackResults) { s in
+                                let stack = store.stacks.first { $0.id == s.stackId }
+                                row(icon: "rectangle.stack.fill", color: stackColor(stack?.color ?? "gray"), title: s.title, subtitle: "Stacks · \(stack?.name ?? "Unknown")") {
+                                    dismiss()
+                                    onNavigate(.stacks)
+                                }
+                            }
+                        }
+                    }
                     if sprintResults.count > 0 {
                         section("Sprints", icon: "flag") {
                             ForEach(sprintResults) { s in
@@ -676,7 +691,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && stackResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -804,6 +819,8 @@ struct GlobalSearchView: View {
             Text("\(inspirationResults.count) inspiration")
             Text("·")
             Text("\(cardResults.count) cards")
+            Text("·")
+            Text("\(stackResults.count) stack items")
             Text("·")
             Text("\(sprintResults.count) sprints")
         }

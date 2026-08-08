@@ -1450,6 +1450,56 @@ struct WordCard: Identifiable, Equatable {
     var col: Int { max(1, (slot - 1) % deckColumns + 1) }
 }
 
+// MARK: - Stacks (push / pop)
+
+let stackColorOptions = ["gray", "blue", "indigo", "purple", "pink", "red", "orange", "yellow", "green", "teal"]
+
+func stackColor(_ name: String) -> Color {
+    switch name {
+    case "blue": return .blue
+    case "indigo": return .indigo
+    case "purple": return .purple
+    case "pink": return .pink
+    case "red": return .red
+    case "orange": return .orange
+    case "yellow": return .yellow
+    case "green": return .green
+    case "teal": return .teal
+    default: return .gray
+    }
+}
+
+struct Stack: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var color: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct StackItem: Identifiable, Equatable {
+    let id: Int
+    var stackId: Int
+    var title: String
+    var description: String
+    var links: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var linksList: [String] {
+        links.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+}
+
+struct StackComment: Identifiable, Equatable {
+    let id: Int
+    var itemId: Int
+    var body: String
+    var createdAt: Date
+}
+
 // MARK: - Pomodoro
 
 enum PomodoroMode: String, CaseIterable, Identifiable {
