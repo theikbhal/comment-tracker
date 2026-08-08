@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.45.0]
+
+### Added
+- **313 Blogging Websites**: track up to 313 websites with a milestone bar (1, 2, 3, 5, 7, 10, 13, 15, 20, 25, 30, 50, 70, 100, 120, 130, 150, 170, 200, 210, 230, 250, 270, 290, 300, 313) and live progress. Each site carries its theme, domain, target country, language (Hindi, Telugu, Spanish, Portuguese, European, South American, and more), tier-1/2/3 flag, and Google AdSense status. Expand any site to manage its editors/team and its posts — each post can carry local image, video, or audio assets (copied into app storage) with captions. Filter by language or tier and search everything.
+
 ## [v1.44.0]
 
 ### Added

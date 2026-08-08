@@ -48,6 +48,7 @@ struct HelpView: View {
                 airtableCard
                 miniVideosCard
                 ytDownloaderCard
+                blog313Card
                 redditCard
                 eventsCard
                 treeCard
@@ -448,6 +449,17 @@ struct HelpView: View {
             Label("YouTube Downloader — save videos locally", systemImage: "arrow.down.circle.fill")
                 .font(.headline)
             Text("Paste a YouTube link and pick what to save: the video (mp4), the audio (mp3), captions, the description, and the comments — any combination. Files are saved into a folder you choose (default ~/Downloads/CommentTracker) and download history is tracked with progress. Requires yt-dlp and ffmpeg, which are bundled on this Mac.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var blog313Card: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("313 Websites — build a blogging empire", systemImage: "globe")
+                .font(.headline)
+            Text("Track up to 313 blogging websites with milestone progress (1, 2, 3, 5, 7, 10 … 300, 313). Each site has a theme, target country, language (Hindi, Telugu, Spanish, Portuguese, European, South American, and more), tier-1/2/3 flag, and a Google AdSense status. Manage the editor/team for each site, and add posts with local image, video, and audio assets saved into the app's storage.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -1180,6 +1180,65 @@ struct YTDownloadOptions: Equatable {
     }
 }
 
+// MARK: - 313 Blogging Websites
+
+let blogSiteMilestones: [Int] = [1, 2, 3, 5, 7, 10, 13, 15, 20, 25, 30, 50, 70, 100, 120, 130, 150, 170, 200, 210, 230, 250, 270, 290, 300, 313]
+
+let blogLanguages: [String] = ["English", "Hindi", "Telugu", "Tamil", "Kannada", "Malayalam", "Bengali", "Marathi", "Gujarati", "Urdu", "Spanish", "Portuguese", "French", "German", "Italian", "Dutch", "Polish", "Turkish", "Indonesian", "Vietnamese", "Arabic", "Thai", "Swahili", "Tagalog"]
+
+let blogCountryTiers: [String] = ["Tier 1", "Tier 2", "Tier 3"]
+
+struct BlogSite: Identifiable, Equatable {
+    let id: Int
+    var name: String
+    var domain: String
+    var theme: String
+    var country: String
+    var language: String
+    var tier: String
+    var adsense: Bool
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var tagList: [String] {
+        var tags: [String] = []
+        if !theme.isEmpty { tags.append(theme) }
+        if !language.isEmpty { tags.append(language) }
+        if !country.isEmpty { tags.append(country) }
+        if !tier.isEmpty { tags.append(tier) }
+        return tags
+    }
+}
+
+struct BlogSiteEditor: Identifiable, Equatable {
+    let id: Int
+    let siteID: Int
+    var name: String
+    var role: String
+    let createdAt: Date
+}
+
+struct BlogSitePost: Identifiable, Equatable {
+    let id: Int
+    let siteID: Int
+    var title: String
+    var description: String
+    var url: String
+    var status: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct BlogPostAsset: Identifiable, Equatable {
+    let id: Int
+    let postID: Int
+    var kind: String
+    var filename: String
+    var caption: String
+    let createdAt: Date
+}
+
 // MARK: - Mini Reddit
 
 struct RedditPost: Identifiable, Equatable {

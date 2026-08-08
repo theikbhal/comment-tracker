@@ -80,6 +80,10 @@ final class Store: ObservableObject {
     @Published var hostedVideos: [HostedVideo] = []
     @Published var hostedVideoComments: [HostedVideoComment] = []
     @Published var ytDownloads: [YTDownload] = []
+    @Published var blogSites: [BlogSite] = []
+    @Published var blogEditors: [BlogSiteEditor] = []
+    @Published var blogSitePosts: [BlogSitePost] = []
+    @Published var blogPostAssets: [BlogPostAsset] = []
     @Published var redditPosts: [RedditPost] = []
     @Published var redditComments: [RedditComment] = []
     @Published var roadmap: [RoadmapItem] = []
@@ -255,6 +259,10 @@ final class Store: ObservableObject {
         hostedVideos = loadHostedVideos()
         hostedVideoComments = loadHostedVideoComments()
         ytDownloads = loadYTDownloads()
+        blogSites = loadBlogSites()
+        blogEditors = loadBlogEditors()
+        blogSitePosts = loadBlogSitePosts()
+        blogPostAssets = loadBlogPostAssets()
         redditPosts = loadRedditPosts()
         redditComments = loadRedditComments()
         events = loadEvents()
@@ -5568,6 +5576,290 @@ final class Store: ObservableObject {
     func deleteHostedVideoComment(_ id: Int) {
         _ = db.execute("DELETE FROM hosted_video_comments WHERE id = ?", [id])
         _ = db.execute("DELETE FROM hosted_video_comments WHERE parent_id = ?", [id])
+        refresh()
+    }
+
+    // MARK: - 313 Blogging Websites
+
+    private func loadBlogSites() -> [BlogSite] {
+        db.query("SELECT * FROM blog_sites ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let name = row["name"] as? String,
+                let domain = row["domain"] as? String,
+                let theme = row["theme"] as? String,
+                let country = row["country"] as? String,
+                let language = row["language"] as? String,
+                let tier = row["tier"] as? String,
+                let adsense = row["adsense"] as? Int,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return BlogSite(
+                id: id,
+                name: name,
+                domain: domain,
+                theme: theme,
+                country: country,
+                language: language,
+                tier: tier,
+                adsense: adsense == 1,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadBlogEditors() -> [BlogSiteEditor] {
+        db.query("SELECT * FROM blog_site_editors ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let siteID = row["site_id"] as? Int,
+                let name = row["name"] as? String,
+                let role = row["role"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return BlogSiteEditor(id: id, siteID: siteID, name: name, role: role, createdAt: Date(timeIntervalSince1970: created))
+        }
+    }
+
+    private func loadBlogSitePosts() -> [BlogSitePost] {
+        db.query("SELECT * FROM blog_posts ORDER BY created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let siteID = row["site_id"] as? Int,
+                let title = row["title"] as? String,
+                let description = row["description"] as? String,
+                let url = row["url"] as? String,
+                let status = row["status"] as? String,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return BlogSitePost(
+                id: id,
+                siteID: siteID,
+                title: title,
+                description: description,
+                url: url,
+                status: status,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadBlogPostAssets() -> [BlogPostAsset] {
+        db.query("SELECT * FROM blog_post_assets ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let postID = row["post_id"] as? Int,
+                let kind = row["kind"] as? String,
+                let filename = row["filename"] as? String,
+                let caption = row["caption"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return BlogPostAsset(id: id, postID: postID, kind: kind, filename: filename, caption: caption, createdAt: Date(timeIntervalSince1970: created))
+        }
+    }
+
+    var blogAssetsDirectoryURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("CommentTracker/BlogAssets", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    func blogEditors(for siteID: Int) -> [BlogSiteEditor] {
+        blogEditors.filter { $0.siteID == siteID }
+    }
+
+    func blogPosts(for siteID: Int) -> [BlogSitePost] {
+        blogSitePosts.filter { $0.siteID == siteID }
+    }
+
+    func blogPostAssets(for postID: Int) -> [BlogPostAsset] {
+        blogPostAssets.filter { $0.postID == postID }
+    }
+
+    func blogSite(_ s: BlogSite, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return s.name.lowercased().contains(q)
+            || s.domain.lowercased().contains(q)
+            || s.theme.lowercased().contains(q)
+            || s.country.lowercased().contains(q)
+            || s.language.lowercased().contains(q)
+            || s.tier.lowercased().contains(q)
+    }
+
+    func blogSites(tagged tag: String) -> [BlogSite] {
+        blogSites.filter { $0.tagList.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) }
+    }
+
+    var blogSiteTagList: [String] {
+        var seen: [String] = []
+        for s in blogSites {
+            for tag in s.tagList where !seen.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
+                seen.append(tag)
+            }
+        }
+        return seen
+    }
+
+    func blogSites(language: String) -> [BlogSite] {
+        blogSites.filter { $0.language.caseInsensitiveCompare(language) == .orderedSame }
+    }
+
+    var blogLanguages: [String] {
+        var seen: [String] = []
+        for s in blogSites where !s.language.isEmpty {
+            if !seen.contains(where: { $0.caseInsensitiveCompare(s.language) == .orderedSame }) {
+                seen.append(s.language)
+            }
+        }
+        return seen
+    }
+
+    var blogTierCounts: [String: Int] {
+        Dictionary(grouping: blogSites, by: { $0.tier }).mapValues(\.count)
+    }
+
+    var adsenseApprovedCount: Int {
+        blogSites.filter(\.adsense).count
+    }
+
+    @discardableResult
+    func addBlogSite(name: String, domain: String, theme: String, country: String, language: String, tier: String, adsense: Bool) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let maxPos = (blogSites.map(\.position).max() ?? -1) + 1
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO blog_sites (name, domain, theme, country, language, tier, adsense, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [trimmed, domain, theme, country, language, tier, adsense ? 1 : 0, maxPos, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateBlogSite(id: Int, name: String, domain: String, theme: String, country: String, language: String, tier: String, adsense: Bool) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE blog_sites SET name = ?, domain = ?, theme = ?, country = ?, language = ?, tier = ?, adsense = ?, updated_at = ? WHERE id = ?",
+            [trimmed, domain, theme, country, language, tier, adsense ? 1 : 0, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveBlogSite(id: Int, direction: Int) {
+        let list = blogSites.sorted { $0.position < $1.position }
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE blog_sites SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE blog_sites SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteBlogSite(_ id: Int) {
+        let sitePosts = blogSitePosts.filter { $0.siteID == id }
+        for post in sitePosts {
+            let assets = blogPostAssets.filter { $0.postID == post.id }
+            for asset in assets where !asset.filename.isEmpty {
+                try? FileManager.default.removeItem(at: blogAssetsDirectoryURL.appendingPathComponent(asset.filename))
+            }
+            _ = db.execute("DELETE FROM blog_post_assets WHERE post_id = ?", [post.id])
+        }
+        _ = db.execute("DELETE FROM blog_posts WHERE site_id = ?", [id])
+        _ = db.execute("DELETE FROM blog_site_editors WHERE site_id = ?", [id])
+        _ = db.execute("DELETE FROM blog_sites WHERE id = ?", [id])
+        refresh()
+    }
+
+    @discardableResult
+    func addBlogEditor(siteID: Int, name: String, role: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        _ = db.execute(
+            "INSERT INTO blog_site_editors (site_id, name, role, created_at) VALUES (?, ?, ?, ?)",
+            [siteID, trimmed, role, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func deleteBlogEditor(_ id: Int) {
+        _ = db.execute("DELETE FROM blog_site_editors WHERE id = ?", [id])
+        refresh()
+    }
+
+    @discardableResult
+    func addBlogSitePost(siteID: Int, title: String, description: String, url: String, status: String = "draft") -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO blog_posts (site_id, title, description, url, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [siteID, trimmed, description, url, status, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateBlogSitePost(id: Int, title: String, description: String, url: String, status: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE blog_posts SET title = ?, description = ?, url = ?, status = ?, updated_at = ? WHERE id = ?",
+            [trimmed, description, url, status, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func deleteBlogSitePost(_ id: Int) {
+        let assets = blogPostAssets.filter { $0.postID == id }
+        for asset in assets where !asset.filename.isEmpty {
+            try? FileManager.default.removeItem(at: blogAssetsDirectoryURL.appendingPathComponent(asset.filename))
+        }
+        _ = db.execute("DELETE FROM blog_post_assets WHERE post_id = ?", [id])
+        _ = db.execute("DELETE FROM blog_posts WHERE id = ?", [id])
+        refresh()
+    }
+
+    func addBlogPostAsset(postID: Int, kind: String, from sourceURL: URL, caption: String) {
+        let ext = sourceURL.pathExtension.lowercased()
+        let filename = UUID().uuidString + "." + ext
+        let dest = blogAssetsDirectoryURL.appendingPathComponent(filename)
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: dest)
+        } catch {
+            return
+        }
+        _ = db.execute(
+            "INSERT INTO blog_post_assets (post_id, kind, filename, caption, created_at) VALUES (?, ?, ?, ?, ?)",
+            [postID, kind, filename, caption, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteBlogPostAsset(_ id: Int) {
+        if let asset = blogPostAssets.first(where: { $0.id == id }), !asset.filename.isEmpty {
+            try? FileManager.default.removeItem(at: blogAssetsDirectoryURL.appendingPathComponent(asset.filename))
+        }
+        _ = db.execute("DELETE FROM blog_post_assets WHERE id = ?", [id])
+        refresh()
+    }
+
+    func addBlogPostAssetCaption(caption: String, for asset: BlogPostAsset?) {
+        guard let asset, let trimmed = Optional(caption.trimmingCharacters(in: .whitespacesAndNewlines)), !trimmed.isEmpty else { return }
+        _ = db.execute("UPDATE blog_post_assets SET caption = ? WHERE id = ?", [trimmed, asset.id])
         refresh()
     }
 

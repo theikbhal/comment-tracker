@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, ytdl, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, bigcards, stacks, adhd, background, pomodoro, deepwork, sprints, voice, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, blog313, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, ytdl, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, bigcards, stacks, adhd, background, pomodoro, deepwork, sprints, voice, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -17,6 +17,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .schedule: return "Schedule"
         case .mindmap: return "Mind Map"
         case .blog: return "Blog"
+        case .blog313: return "313 Websites"
         case .slack: return "Slack"
         case .calendar: return "Calendar"
         case .year: return "Year"
@@ -76,6 +77,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .schedule: return "calendar.badge.clock"
         case .mindmap: return "point.3.connected.trianglepath.dotted"
         case .blog: return "newspaper.fill"
+        case .blog313: return "globe"
         case .slack: return "bubble.left.and.bubble.right.fill"
         case .calendar: return "calendar"
         case .year: return "calendar.circle"
@@ -199,6 +201,7 @@ struct ContentView: View {
         case .schedule: ScheduleView()
         case .mindmap: MiniMindMapView()
         case .blog: BlogView()
+        case .blog313: BloggingSitesView()
         case .slack: SlackView()
         case .calendar: CalendarView()
         case .year: YearView()
