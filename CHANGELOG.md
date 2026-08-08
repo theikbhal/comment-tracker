@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.36.0]
+
+### Changed
+- **Family comments**: each person's comments now show newest first, so the top comment is the latest one.
+
 ## [v1.35.0]
 
 ### Added

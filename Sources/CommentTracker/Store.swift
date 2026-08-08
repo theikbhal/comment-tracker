@@ -4053,7 +4053,7 @@ final class Store: ObservableObject {
     func familyComments(for memberID: Int) -> [FamilyComment] {
         familyComments
             .filter { $0.memberId == memberID }
-            .sorted { $0.createdAt < $1.createdAt }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     func addFamilyComment(memberID: Int, body: String) {
