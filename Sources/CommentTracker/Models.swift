@@ -1175,6 +1175,23 @@ struct AudioNoteComment: Identifiable, Equatable {
     var createdAt: Date
 }
 
+struct Celebration: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var url: String
+    var note: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct CelebrationComment: Identifiable, Equatable {
+    let id: Int
+    var celebrationId: Int
+    var body: String
+    var createdAt: Date
+}
+
 // MARK: - Follow-ups
 
 struct FollowUp: Identifiable, Equatable {

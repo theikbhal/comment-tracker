@@ -51,6 +51,7 @@ struct HelpView: View {
                 eventsCard
                 treeCard
                 faqCard
+                celebrationsCard
                 pendingCard
                 dietCard
                 familyCard
@@ -463,6 +464,17 @@ struct HelpView: View {
             Label("FAQ — question banks from videos", systemImage: "questionmark.circle.fill")
                 .font(.headline)
             Text("Attach a YouTube link and paste the FAQ ChatGPT wrote from its transcript. Lines starting with Q1., Q2., … become questions with their answers. Reorder, edit, or add questions any time.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var celebrationsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Celebrations — collect the wins you replay", systemImage: "party.popper.fill")
+                .font(.headline)
+            Text("Collect videos worth remembering and replay them right in the app. Take markdown notes at the video level, keep an overview note for the whole collection, and comment on each video.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

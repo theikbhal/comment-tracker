@@ -511,6 +511,26 @@ final class DatabaseManager {
             body TEXT NOT NULL,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS celebrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            url TEXT NOT NULL DEFAULT '',
+            note TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS celebration_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            celebration_id INTEGER NOT NULL,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS celebration_overview (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            notes TEXT NOT NULL DEFAULT '',
+            updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

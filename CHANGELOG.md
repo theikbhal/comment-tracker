@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.32.0]
+
+### Added
+- **Celebrations tab**: collect the videos you want to remember and replay — wins, milestones, moments. Each video embeds and plays right in the app, has its own markdown notes and comments feed, and the whole collection has an overview note above every video.
+
 ## [v1.31.0]
 
 ### Added

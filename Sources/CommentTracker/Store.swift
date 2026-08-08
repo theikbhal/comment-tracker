@@ -50,6 +50,9 @@ final class Store: ObservableObject {
     @Published var weekCards: [WeekCard] = []
     @Published var audioNotes: [AudioNote] = []
     @Published var audioNoteComments: [AudioNoteComment] = []
+    @Published var celebrations: [Celebration] = []
+    @Published var celebrationComments: [CelebrationComment] = []
+    @Published var celebrationNotes: String = ""
     @Published var challenges: [Challenge] = []
     @Published var challengeComments: [ChallengeComment] = []
     @Published var challengePrerequisiteLinks: [ChallengePrerequisiteLink] = []
@@ -192,6 +195,9 @@ final class Store: ObservableObject {
         weekCards = loadWeekCards()
         audioNotes = loadAudioNotes()
         audioNoteComments = loadAudioNoteComments()
+        celebrations = loadCelebrations()
+        celebrationComments = loadCelebrationComments()
+        celebrationNotes = loadCelebrationNotes()
         challenges = loadChallenges()
         challengeComments = loadChallengeComments()
         challengePrerequisiteLinks = loadChallengePrerequisiteLinks()
@@ -2987,6 +2993,149 @@ final class Store: ObservableObject {
         let path = audioDirectoryURL.appendingPathComponent(note.filename).path
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(path, forType: .string)
+    }
+
+    // MARK: - Celebrations
+
+    private func loadCelebrations() -> [Celebration] {
+        db.query("SELECT * FROM celebrations ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let url = row["url"] as? String,
+                let note = row["note"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Celebration(
+                id: id,
+                title: title,
+                url: url,
+                note: note,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadCelebrationComments() -> [CelebrationComment] {
+        db.query("SELECT * FROM celebration_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let celebrationID = row["celebration_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return CelebrationComment(
+                id: id,
+                celebrationId: celebrationID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadCelebrationNotes() -> String {
+        db.query("SELECT * FROM celebration_overview WHERE id = 1").first?["notes"] as? String ?? ""
+    }
+
+    func celebration(_ c: Celebration, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return c.title.lowercased().contains(q) || c.note.lowercased().contains(q)
+    }
+
+    @discardableResult
+    func addCelebration(title: String, url: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO celebrations (title, url, note, position, created_at, updated_at) VALUES (?, ?, '', ?, ?, ?)",
+            [trimmed, url, celebrations.count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateCelebration(id: Int, title: String, url: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE celebrations SET title = ?, url = ?, updated_at = ? WHERE id = ?",
+            [trimmed, url, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func updateCelebrationNote(id: Int, note: String) {
+        _ = db.execute(
+            "UPDATE celebrations SET note = ?, updated_at = ? WHERE id = ?",
+            [note, Date().timeIntervalSince1970, id]
+        )
+        if let index = celebrations.firstIndex(where: { $0.id == id }) {
+            celebrations[index].note = note
+            celebrations[index].updatedAt = Date()
+        }
+    }
+
+    func moveCelebration(id: Int, direction: Int) {
+        guard let index = celebrations.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < celebrations.count else { return }
+        let other = celebrations[target]
+        _ = db.execute("UPDATE celebrations SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE celebrations SET position = ?, updated_at = ? WHERE id = ?", [celebrations[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteCelebration(_ id: Int) {
+        _ = db.execute("DELETE FROM celebrations WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM celebration_comments WHERE celebration_id = ?", [id])
+        refresh()
+    }
+
+    func celebrationComments(for celebrationID: Int) -> [CelebrationComment] {
+        celebrationComments
+            .filter { $0.celebrationId == celebrationID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addCelebrationComment(celebrationID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO celebration_comments (celebration_id, body, created_at) VALUES (?, ?, ?)",
+            [celebrationID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteCelebrationComment(_ id: Int) {
+        _ = db.execute("DELETE FROM celebration_comments WHERE id = ?", [id])
+        refresh()
+    }
+
+    func saveCelebrationNotes(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if celebrationNotes == trimmed && !db.query("SELECT id FROM celebration_overview WHERE id = 1").isEmpty {
+            return
+        }
+        if db.query("SELECT id FROM celebration_overview WHERE id = 1").isEmpty {
+            _ = db.execute(
+                "INSERT INTO celebration_overview (id, notes, updated_at) VALUES (1, ?, ?)",
+                [trimmed, Date().timeIntervalSince1970]
+            )
+        } else {
+            _ = db.execute(
+                "UPDATE celebration_overview SET notes = ?, updated_at = ? WHERE id = 1",
+                [trimmed, Date().timeIntervalSince1970]
+            )
+        }
+        celebrationNotes = trimmed
     }
 
     // MARK: - Challenges

@@ -165,6 +165,10 @@ struct GlobalSearchView: View {
         store.faqs.filter { store.faq($0, matches: query) }
     }
 
+    private var celebrationResults: [Celebration] {
+        store.celebrations.filter { store.celebration($0, matches: query) }
+    }
+
     private var pendingResults: [PendingItem] {
         store.pendingItems.filter { store.pendingItem($0, matches: query) }
     }
@@ -498,6 +502,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if celebrationResults.count > 0 {
+                        section("Celebrations", icon: "party.popper.fill") {
+                            ForEach(celebrationResults) { c in
+                                row(icon: "party.popper.fill", color: .pink, title: c.title, subtitle: "\(store.celebrationComments(for: c.id).count) comments") {
+                                    dismiss()
+                                    onNavigate(.celebrations)
+                                }
+                            }
+                        }
+                    }
                     if pendingResults.count > 0 {
                         section("Pending", icon: "hourglass") {
                             ForEach(pendingResults) { p in
@@ -648,7 +662,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -760,6 +774,8 @@ struct GlobalSearchView: View {
             Text("\(treeResults.count) branches")
             Text("·")
             Text("\(faqResults.count) faqs")
+            Text("·")
+            Text("\(celebrationResults.count) celebrations")
             Text("·")
             Text("\(pendingResults.count) pending")
             Text("·")

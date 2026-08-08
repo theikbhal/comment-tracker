@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, voice, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, voice, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -42,6 +42,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .events: return "Events"
         case .tree: return "Mini Tree"
         case .faq: return "FAQ"
+        case .celebrations: return "Celebrations"
         case .wins: return "Wins"
         case .fails: return "Fails"
         case .notes: return "Notes"
@@ -94,6 +95,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .events: return "calendar.badge.clock"
         case .tree: return "tree"
         case .faq: return "questionmark.circle.fill"
+        case .celebrations: return "party.popper.fill"
         case .wins: return "party.popper"
         case .fails: return "xmark.seal"
         case .notes: return "note.text"
@@ -204,6 +206,7 @@ struct ContentView: View {
         case .events: EventsView()
         case .tree: TreeView()
         case .faq: FaqView()
+        case .celebrations: CelebrationsView()
         case .wins: WinsView()
         case .fails: FailsView()
         case .notes: InterstitialNotesView()
