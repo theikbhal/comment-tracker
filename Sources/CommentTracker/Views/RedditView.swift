@@ -343,6 +343,16 @@ struct RedditDetailSheet: View {
                     Label("Edit", systemImage: "pencil")
                 }
                 .buttonStyle(.bordered)
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Close")
+                .keyboardShortcut(.cancelAction)
             }
             Text(post.title)
                 .font(.title3.bold())

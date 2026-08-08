@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.35.0]
+
+### Added
+- **Reddit thread close button**: the post detail sheet now has an X close button (also bound to Escape) so you can head back to the main app without closing it.
+
 ## [v1.34.0]
 
 ### Added
