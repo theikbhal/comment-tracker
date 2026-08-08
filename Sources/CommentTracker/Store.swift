@@ -38,6 +38,7 @@ final class Store: ObservableObject {
     @Published var projects: [Project] = []
     @Published var longTermProjects: [LongTermProject] = []
     @Published var longTermMilestones: [LongTermMilestone] = []
+    @Published var longTermComments: [LongTermComment] = []
     @Published var deepWork: [DeepWorkSession] = []
     @Published var schedule: [ScheduleEntry] = []
     @Published var holding: [HoldingItem] = []
@@ -195,6 +196,7 @@ final class Store: ObservableObject {
         projects = loadProjects()
         longTermProjects = loadLongTermProjects()
         longTermMilestones = loadLongTermMilestones()
+        longTermComments = loadLongTermComments()
         deepWork = loadDeepWork()
         deepWorkTasks = loadDeepWorkTasks()
         schedule = loadSchedule()
@@ -921,6 +923,7 @@ final class Store: ObservableObject {
                 status: status,
                 description: description,
                 nextAction: nextAction,
+                note: (row["note"] as? String) ?? "",
                 progress: progress,
                 startedAt: (row["started_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
                 targetAt: (row["target_at"] as? Double).map { Date(timeIntervalSince1970: $0) },
@@ -947,6 +950,24 @@ final class Store: ObservableObject {
                 title: title,
                 done: done == 1,
                 position: position,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    private func loadLongTermComments() -> [LongTermComment] {
+        db.query("SELECT * FROM long_term_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let projectID = row["project_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return LongTermComment(
+                id: id,
+                projectId: projectID,
+                parentId: row["parent_id"] as? Int,
+                body: body,
                 createdAt: Date(timeIntervalSince1970: created)
             )
         }
@@ -998,6 +1019,45 @@ final class Store: ObservableObject {
         }
     }
 
+    func saveLongTermProjectNote(id: Int, note: String) {
+        _ = db.execute(
+            "UPDATE long_term_projects SET note = ?, updated_at = ? WHERE id = ?",
+            [note, Date().timeIntervalSince1970, id]
+        )
+        if let index = longTermProjects.firstIndex(where: { $0.id == id }) {
+            longTermProjects[index].note = note
+            longTermProjects[index].updatedAt = Date()
+        }
+    }
+
+    func longTermComments(for projectID: Int) -> [LongTermComment] {
+        longTermComments.filter { $0.projectId == projectID }
+    }
+
+    func topLevelLongTermComments(for projectID: Int) -> [LongTermComment] {
+        longTermComments(for: projectID).filter { !$0.isReply }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func longTermReplies(to commentID: Int) -> [LongTermComment] {
+        longTermComments.filter { $0.parentId == commentID }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addLongTermComment(projectID: Int, parentID: Int?, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO long_term_comments (project_id, parent_id, body, created_at) VALUES (?, ?, ?, ?)",
+            [projectID, parentID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteLongTermComment(_ id: Int) {
+        _ = db.execute("DELETE FROM long_term_comments WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM long_term_comments WHERE parent_id = ?", [id])
+        refresh()
+    }
+
     func moveLongTermProject(id: Int, direction: Int) {
         guard let index = longTermProjects.firstIndex(where: { $0.id == id }) else { return }
         let target = index + direction
@@ -1011,6 +1071,7 @@ final class Store: ObservableObject {
     func deleteLongTermProject(_ id: Int) {
         _ = db.execute("DELETE FROM long_term_projects WHERE id = ?", [id])
         _ = db.execute("DELETE FROM long_term_milestones WHERE project_id = ?", [id])
+        _ = db.execute("DELETE FROM long_term_comments WHERE project_id = ?", [id])
         refresh()
     }
 

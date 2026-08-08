@@ -179,6 +179,13 @@ final class DatabaseManager {
             position INTEGER NOT NULL DEFAULT 0,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS long_term_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            parent_id INTEGER,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS schedule (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             day INTEGER NOT NULL,
@@ -644,6 +651,7 @@ final class DatabaseManager {
         ensureColumn(table: "interstitial_notes", column: "bookmarked", definition: "INTEGER NOT NULL DEFAULT 0")
         ensureColumn(table: "audio_notes", column: "notes", definition: "TEXT NOT NULL DEFAULT ''")
         ensureColumn(table: "deepwork_sessions", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
+        ensureColumn(table: "long_term_projects", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
     }
 
     private func ensureColumn(table: String, column: String, definition: String) {

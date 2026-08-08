@@ -255,9 +255,44 @@ struct LongTermProjectCard: View {
                     }
                     addMilestoneField
                 }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Notes")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: noteBinding)
+                        .font(.system(.caption, design: .monospaced))
+                        .frame(minHeight: 90)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.secondary.opacity(0.3))
+                        )
+                    Text("Markdown supported — \(noteCharCount) characters")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                Divider()
+
+                LongTermCommentsSection(projectID: project.id)
             }
         }
         .card()
+    }
+
+    private var noteBinding: Binding<String> {
+        Binding(
+            get: { project.note },
+            set: { newValue in
+                store.saveLongTermProjectNote(id: project.id, note: newValue)
+            }
+        )
+    }
+
+    private var noteCharCount: Int {
+        project.note.count
     }
 
     private var progressBinding: Binding<Double> {
@@ -454,5 +489,161 @@ struct LongTermProjectEditSheet: View {
             get: { Double(progress) },
             set: { progress = Int($0) }
         )
+    }
+}
+
+// MARK: - Comments (Twitter-style nested threads)
+
+struct LongTermCommentsSection: View {
+    @EnvironmentObject var store: Store
+    let projectID: Int
+
+    @State private var newComment = ""
+
+    private var topLevel: [LongTermComment] {
+        store.topLevelLongTermComments(for: projectID)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Comments")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("\(topLevel.count)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+                Spacer()
+            }
+
+            if topLevel.isEmpty {
+                Text("No comments yet. Start the conversation.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(topLevel) { comment in
+                        LongTermCommentRow(comment: comment, projectID: projectID, depth: 0)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                TextField("Add a comment…", text: $newComment)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(addComment)
+                Button {
+                    addComment()
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 18))
+                }
+                .buttonStyle(.borderless)
+                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    private func addComment() {
+        let trimmed = newComment.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        store.addLongTermComment(projectID: projectID, parentID: nil, body: trimmed)
+        newComment = ""
+    }
+}
+
+struct LongTermCommentRow: View {
+    @EnvironmentObject var store: Store
+    let comment: LongTermComment
+    let projectID: Int
+    let depth: Int
+
+    @State private var showingReply = false
+    @State private var replyText = ""
+
+    private var replies: [LongTermComment] {
+        store.longTermReplies(to: comment.id)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            commentRow
+            if showingReply {
+                HStack(spacing: 8) {
+                    TextField("Reply…", text: $replyText)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(addReply)
+                    Button {
+                        addReply()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 16))
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            ForEach(replies) { reply in
+                LongTermCommentRow(comment: reply, projectID: projectID, depth: depth + 1)
+            }
+        }
+    }
+
+    private var commentRow: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 16))
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                    Spacer()
+                    Button {
+                        store.deleteLongTermComment(comment.id)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Delete comment")
+                }
+                Text(comment.body)
+                    .font(.callout)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    showingReply.toggle()
+                } label: {
+                    Text("Reply")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.blue)
+            }
+        }
+        .padding(.leading, depth == 0 ? 0 : 24)
+        .padding(8)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(depth == 0 ? 0 : 0.5), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .leading) {
+            if depth > 0 {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.25))
+                    .frame(width: 2)
+                    .offset(x: -8)
+            }
+        }
+    }
+
+    private func addReply() {
+        let trimmed = replyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        store.addLongTermComment(projectID: projectID, parentID: comment.id, body: trimmed)
+        replyText = ""
+        showingReply = false
     }
 }

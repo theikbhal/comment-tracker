@@ -2,6 +2,12 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.38.0]
+
+### Added
+- **Long Term Project notes**: each project now has its own markdown notes editor, saved as you type.
+- **Long Term Project comments**: comment on any project, and reply to any comment to build nested threads at any depth (Twitter/X-style), each with its own reply button and delete.
+
 ## [v1.37.0]
 
 ### Added

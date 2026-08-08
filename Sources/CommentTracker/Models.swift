@@ -552,6 +552,7 @@ struct LongTermProject: Identifiable, Equatable {
     var status: LongTermProjectStatus
     var description: String
     var nextAction: String
+    var note: String
     var progress: Int
     var startedAt: Date?
     var targetAt: Date?
@@ -567,6 +568,16 @@ struct LongTermMilestone: Identifiable, Equatable {
     var done: Bool
     var position: Int
     var createdAt: Date
+}
+
+struct LongTermComment: Identifiable, Equatable {
+    let id: Int
+    var projectId: Int
+    var parentId: Int?
+    var body: String
+    var createdAt: Date
+
+    var isReply: Bool { parentId != nil }
 }
 
 // MARK: - Weekly Schedule
