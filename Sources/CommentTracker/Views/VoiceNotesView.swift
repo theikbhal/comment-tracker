@@ -159,45 +159,97 @@ struct VoiceNotesView: View {
 // MARK: - Row
 
 private struct VoiceNoteRowView: View {
+    @EnvironmentObject var store: Store
     let note: AudioNote
     let isPlaying: Bool
     let onPlay: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @State private var showingComments = false
+    @State private var newComment = ""
+    @State private var hoveredCommentID: Int?
+
+    private var comments: [AudioNoteComment] {
+        store.audioNoteComments(for: note.id)
+    }
+
     var body: some View {
-        HStack(spacing: 10) {
-            Button(action: onPlay) {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 28, height: 28)
-                    .background((isPlaying ? Color.orange : Color.blue).gradient, in: RoundedRectangle(cornerRadius: 7))
-            }
-            .buttonStyle(.plain)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(note.title)
-                    .font(.subheadline.weight(.semibold))
-                if !note.notes.isEmpty {
-                    Text(note.notes)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Button(action: onPlay) {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background((isPlaying ? Color.orange : Color.blue).gradient, in: RoundedRectangle(cornerRadius: 7))
                 }
-                HStack(spacing: 8) {
-                    Text(note.durationText)
-                    Text(note.createdAt.formatted(date: .abbreviated, time: .shortened))
+                .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(note.title)
+                        .font(.subheadline.weight(.semibold))
+                    if !note.notes.isEmpty {
+                        Text(note.notes)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    HStack(spacing: 8) {
+                        Text(note.durationText)
+                        Text(note.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
                 }
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                Spacer()
+                Button {
+                    store.copyAudioNotePath(id: note.id)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.borderless)
+                .help("Copy local file path")
+                Button {
+                    showingComments.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bubble.left")
+                            .font(.system(size: 11))
+                        Text("\(comments.count)")
+                            .font(.caption2.weight(.semibold))
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(comments.isEmpty ? Color.secondary : Color.blue)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background((comments.isEmpty ? Color.gray : Color.blue).opacity(0.12), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .help(showingComments ? "Hide comments" : "Show comments")
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.borderless)
+                .help("Edit note")
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.borderless)
+                .help("Delete note")
             }
-            Spacer()
-            Button(action: onPlay) {
-                Image(systemName: isPlaying ? "stop.fill" : "arrow.counterclockwise")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+
+            if showingComments {
+                Divider()
+                commentsSection
             }
-            .buttonStyle(.plain)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -210,10 +262,110 @@ private struct VoiceNoteRowView: View {
             } label: {
                 Label("Edit", systemImage: "pencil")
             }
+            Button {
+                store.copyAudioNotePath(id: note.id)
+            } label: {
+                Label("Copy File Path", systemImage: "doc.on.doc")
+            }
+            Button {
+                showingComments.toggle()
+            } label: {
+                Label(showingComments ? "Hide comments" : "Show comments", systemImage: "bubble.left")
+            }
+            Divider()
             Button(role: .destructive) {
                 onDelete()
             } label: {
                 Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private var commentsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if comments.isEmpty {
+                Text("Nothing yet — leave a note like Trello.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(comments.enumerated()), id: \.element.id) { index, comment in
+                        commentRow(comment)
+                        if index < comments.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .padding(6)
+                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            HStack(alignment: .bottom, spacing: 8) {
+                TextEditor(text: $newComment)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .frame(height: 56)
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                    .overlay(alignment: .topLeading) {
+                        if newComment.isEmpty {
+                            Text("Write a comment…")
+                                .font(.body)
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 9)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                Button {
+                    store.addAudioNoteComment(noteID: note.id, body: newComment)
+                    newComment = ""
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 24))
+                }
+                .buttonStyle(.borderless)
+                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .keyboardShortcut(.return, modifiers: .command)
+            }
+        }
+    }
+
+    private func commentRow(_ comment: AudioNoteComment) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "person.crop.circle")
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(comment.body)
+                    .font(.subheadline)
+                Text(comment.createdAt.formatted(date: .omitted, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            hoveredCommentID = hovering ? comment.id : nil
+        }
+        .overlay(alignment: .trailing) {
+            if hoveredCommentID == comment.id {
+                Button {
+                    store.deleteAudioNoteComment(comment.id)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Delete comment")
+                .padding(.trailing, 8)
             }
         }
     }

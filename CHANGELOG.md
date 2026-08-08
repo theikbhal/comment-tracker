@@ -2,6 +2,12 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.31.0]
+
+### Added
+- **Voice Notes comments**: every voice note now has a Trello-style comments feed — click the bubble on a note to add, read, or delete comments (hover a comment to delete it).
+- **Copy file path**: a button and context-menu action copy each voice note's local audio file path to the clipboard.
+
 ## [v1.30.0]
 
 ### Fixed

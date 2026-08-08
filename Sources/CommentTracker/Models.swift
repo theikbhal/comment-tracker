@@ -1168,6 +1168,13 @@ struct FamilyComment: Identifiable, Equatable {
     var createdAt: Date
 }
 
+struct AudioNoteComment: Identifiable, Equatable {
+    let id: Int
+    var noteId: Int
+    var body: String
+    var createdAt: Date
+}
+
 // MARK: - Follow-ups
 
 struct FollowUp: Identifiable, Equatable {

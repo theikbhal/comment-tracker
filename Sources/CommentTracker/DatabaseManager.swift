@@ -505,6 +505,12 @@ final class DatabaseManager {
             position INTEGER NOT NULL DEFAULT 0,
             created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS audio_note_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER NOT NULL,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,

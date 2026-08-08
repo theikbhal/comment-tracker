@@ -49,6 +49,7 @@ final class Store: ObservableObject {
     @Published var yearCards: [YearCard] = []
     @Published var weekCards: [WeekCard] = []
     @Published var audioNotes: [AudioNote] = []
+    @Published var audioNoteComments: [AudioNoteComment] = []
     @Published var challenges: [Challenge] = []
     @Published var challengeComments: [ChallengeComment] = []
     @Published var challengePrerequisiteLinks: [ChallengePrerequisiteLink] = []
@@ -190,6 +191,7 @@ final class Store: ObservableObject {
         yearCards = loadYearCards()
         weekCards = loadWeekCards()
         audioNotes = loadAudioNotes()
+        audioNoteComments = loadAudioNoteComments()
         challenges = loadChallenges()
         challengeComments = loadChallengeComments()
         challengePrerequisiteLinks = loadChallengePrerequisiteLinks()
@@ -2847,6 +2849,7 @@ final class Store: ObservableObject {
         let file = audioDirectoryURL.appendingPathComponent(note.filename)
         try? FileManager.default.removeItem(at: file)
         _ = db.execute("DELETE FROM audio_notes WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM audio_note_comments WHERE note_id = ?", [id])
         refresh()
     }
 
@@ -2937,6 +2940,53 @@ final class Store: ObservableObject {
             try? FileManager.default.removeItem(at: url)
         }
         currentRecordingFilename = nil
+    }
+
+    // MARK: Audio note comments
+
+    func audioNoteComments(for noteID: Int) -> [AudioNoteComment] {
+        audioNoteComments
+            .filter { $0.noteId == noteID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addAudioNoteComment(noteID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO audio_note_comments (note_id, body, created_at) VALUES (?, ?, ?)",
+            [noteID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteAudioNoteComment(_ id: Int) {
+        _ = db.execute("DELETE FROM audio_note_comments WHERE id = ?", [id])
+        refresh()
+    }
+
+    private func loadAudioNoteComments() -> [AudioNoteComment] {
+        db.query("SELECT * FROM audio_note_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let noteID = row["note_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return AudioNoteComment(
+                id: id,
+                noteId: noteID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func copyAudioNotePath(id: Int) {
+        guard let note = audioNotes.first(where: { $0.id == id }) else { return }
+        let path = audioDirectoryURL.appendingPathComponent(note.filename).path
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(path, forType: .string)
     }
 
     // MARK: - Challenges
