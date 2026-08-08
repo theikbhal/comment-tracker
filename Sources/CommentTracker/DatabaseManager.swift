@@ -244,6 +244,7 @@ final class DatabaseManager {
         CREATE TABLE IF NOT EXISTS audio_notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
             filename TEXT NOT NULL,
             duration REAL NOT NULL DEFAULT 0,
             created_at REAL NOT NULL,
@@ -383,6 +384,12 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS family_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            member_id INTEGER NOT NULL,
+            body TEXT NOT NULL,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS followups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -482,6 +489,22 @@ final class DatabaseManager {
             created_at REAL NOT NULL,
             updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS faqs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            youtube_url TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS faq_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            faq_id INTEGER NOT NULL,
+            question TEXT NOT NULL,
+            answer TEXT NOT NULL DEFAULT '',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS links (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT,
@@ -564,6 +587,7 @@ final class DatabaseManager {
         _ = execute("UPDATE wordcards SET slot = id WHERE slot = 0")
         ensureColumn(table: "calendar_events", column: "reminder", definition: "INTEGER NOT NULL DEFAULT 0")
         ensureColumn(table: "interstitial_notes", column: "bookmarked", definition: "INTEGER NOT NULL DEFAULT 0")
+        ensureColumn(table: "audio_notes", column: "notes", definition: "TEXT NOT NULL DEFAULT ''")
     }
 
     private func ensureColumn(table: String, column: String, definition: String) {

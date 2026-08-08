@@ -132,93 +132,125 @@ struct FamilyRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @State private var showingComments = false
+    @State private var newComment = ""
+    @State private var hoveredCommentID: Int?
+
     private var renderedNote: AttributedString? {
         let trimmed = member.note.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         return try? AttributedString(markdown: trimmed, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
     }
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(spacing: 4) {
-                Button {
-                    store.moveFamilyMember(id: member.id, direction: -1)
-                } label: {
-                    Image(systemName: "chevron.up")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .buttonStyle(.plain)
-                .disabled(isFirst)
-                .opacity(isFirst ? 0.3 : 1)
-                .help("Move up")
-                Button {
-                    store.moveFamilyMember(id: member.id, direction: 1)
-                } label: {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .buttonStyle(.plain)
-                .disabled(isLast)
-                .opacity(isLast ? 0.3 : 1)
-                .help("Move down")
-            }
-            .padding(.top, 4)
+    private var comments: [FamilyComment] {
+        store.familyComments(for: member.id)
+    }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(Color.green.gradient)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(member.name)
-                            .font(.subheadline.weight(.bold))
-                        if !member.relation.isEmpty {
-                            Text(member.relation)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    if member.hasBirthday {
-                        HStack(spacing: 4) {
-                            Image(systemName: "birthday.cake.fill")
-                                .font(.system(size: 10))
-                            Text(birthdayChipText)
-                                .font(.caption2.weight(.semibold))
-                        }
-                        .foregroundStyle(birthdayColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(birthdayColor.opacity(0.12), in: Capsule())
-                        .help("\(member.birthdayText) birthday")
-                    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 4) {
                     Button {
-                        onEdit()
+                        store.moveFamilyMember(id: member.id, direction: -1)
                     } label: {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 11))
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 10, weight: .bold))
                     }
-                    .buttonStyle(.borderless)
-                    .help("Edit member")
+                    .buttonStyle(.plain)
+                    .disabled(isFirst)
+                    .opacity(isFirst ? 0.3 : 1)
+                    .help("Move up")
                     Button {
-                        onDelete()
+                        store.moveFamilyMember(id: member.id, direction: 1)
                     } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.red)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
                     }
-                    .buttonStyle(.borderless)
-                    .help("Remove member")
+                    .buttonStyle(.plain)
+                    .disabled(isLast)
+                    .opacity(isLast ? 0.3 : 1)
+                    .help("Move down")
                 }
-                if let rendered = renderedNote {
-                    Text(rendered)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .environment(\.openURL, OpenURLAction { url in
-                            NSWorkspace.shared.open(url)
-                            return .handled
-                        })
+                .padding(.top, 4)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundStyle(Color.green.gradient)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(member.name)
+                                .font(.subheadline.weight(.bold))
+                            if !member.relation.isEmpty {
+                                Text(member.relation)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        if member.hasBirthday {
+                            HStack(spacing: 4) {
+                                Image(systemName: "birthday.cake.fill")
+                                    .font(.system(size: 10))
+                                Text(birthdayChipText)
+                                    .font(.caption2.weight(.semibold))
+                            }
+                            .foregroundStyle(birthdayColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(birthdayColor.opacity(0.12), in: Capsule())
+                            .help("\(member.birthdayText) birthday")
+                        }
+                        Button {
+                            showingComments.toggle()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "bubble.left")
+                                    .font(.system(size: 11))
+                                Text("\(comments.count)")
+                                    .font(.caption2.weight(.semibold))
+                                    .monospacedDigit()
+                            }
+                            .foregroundStyle(comments.isEmpty ? Color.secondary : Color.green)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background((comments.isEmpty ? Color.gray : Color.green).opacity(0.12), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .help(showingComments ? "Hide comments" : "Show comments")
+                        Button {
+                            onEdit()
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 11))
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Edit member")
+                        Button {
+                            onDelete()
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove member")
+                    }
+                    if let rendered = renderedNote {
+                        Text(rendered)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .environment(\.openURL, OpenURLAction { url in
+                                NSWorkspace.shared.open(url)
+                                return .handled
+                            })
+                    }
                 }
+            }
+
+            if showingComments {
+                Divider()
+                commentsSection
             }
         }
         .padding(12)
@@ -233,11 +265,103 @@ struct FamilyRow: View {
             Button { onEdit() } label: {
                 Label("Edit member…", systemImage: "pencil")
             }
+            Button { showingComments.toggle() } label: {
+                Label(showingComments ? "Hide comments" : "Show comments", systemImage: "bubble.left")
+            }
             Divider()
             Button(role: .destructive) {
                 onDelete()
             } label: {
                 Label("Remove", systemImage: "trash")
+            }
+        }
+    }
+
+    private var commentsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if comments.isEmpty {
+                Text("Nothing yet — leave a note like Trello.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(comments.enumerated()), id: \.element.id) { index, comment in
+                        commentRow(comment)
+                        if index < comments.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .padding(6)
+                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            HStack(alignment: .bottom, spacing: 8) {
+                TextEditor(text: $newComment)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .frame(height: 56)
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                    .overlay(alignment: .topLeading) {
+                        if newComment.isEmpty {
+                            Text("Write a comment…")
+                                .font(.body)
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 9)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                Button {
+                    store.addFamilyComment(memberID: member.id, body: newComment)
+                    newComment = ""
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 24))
+                }
+                .buttonStyle(.borderless)
+                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .keyboardShortcut(.return, modifiers: .command)
+            }
+        }
+    }
+
+    private func commentRow(_ comment: FamilyComment) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "person.crop.circle")
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(comment.body)
+                    .font(.subheadline)
+                Text(comment.createdAt.formatted(date: .omitted, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            hoveredCommentID = hovering ? comment.id : nil
+        }
+        .overlay(alignment: .trailing) {
+            if hoveredCommentID == comment.id {
+                Button {
+                    store.deleteFamilyComment(comment.id)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Delete comment")
+                .padding(.trailing, 8)
             }
         }
     }

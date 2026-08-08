@@ -161,6 +161,10 @@ struct GlobalSearchView: View {
         store.treeNodes.filter { store.treeNode($0, matches: query) }
     }
 
+    private var faqResults: [Faq] {
+        store.faqs.filter { store.faq($0, matches: query) }
+    }
+
     private var pendingResults: [PendingItem] {
         store.pendingItems.filter { store.pendingItem($0, matches: query) }
     }
@@ -484,6 +488,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if faqResults.count > 0 {
+                        section("FAQ", icon: "questionmark.circle.fill") {
+                            ForEach(faqResults) { f in
+                                row(icon: "questionmark.circle.fill", color: .purple, title: f.title, subtitle: "\(store.faqEntries(for: f.id).count) questions") {
+                                    dismiss()
+                                    onNavigate(.faq)
+                                }
+                            }
+                        }
+                    }
                     if pendingResults.count > 0 {
                         section("Pending", icon: "hourglass") {
                             ForEach(pendingResults) { p in
@@ -634,7 +648,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -744,6 +758,8 @@ struct GlobalSearchView: View {
             Text("\(eventResults.count) events")
             Text("·")
             Text("\(treeResults.count) branches")
+            Text("·")
+            Text("\(faqResults.count) faqs")
             Text("·")
             Text("\(pendingResults.count) pending")
             Text("·")

@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.29.0]
+
+### Added
+- **FAQ tab**: question banks from videos. Attach a YouTube link (with thumbnail) and paste the FAQ ChatGPT wrote from the transcript — lines starting with Q1., Q2., … become questions with their answers. Reorder, edit, or add questions any time.
+
 ## [v1.28.0]
 
 ### Added

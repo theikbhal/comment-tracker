@@ -50,6 +50,7 @@ struct HelpView: View {
                 redditCard
                 eventsCard
                 treeCard
+                faqCard
                 pendingCard
                 dietCard
                 familyCard
@@ -451,6 +452,17 @@ struct HelpView: View {
             Label("Mini Tree — grow your own branches", systemImage: "tree")
                 .font(.headline)
             Text("A tree of ideas. Plant a root and add children to any branch — expand and collapse them, reorder siblings, and add a markdown note to each branch. Deleting a branch removes everything under it.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var faqCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("FAQ — question banks from videos", systemImage: "questionmark.circle.fill")
+                .font(.headline)
+            Text("Attach a YouTube link and paste the FAQ ChatGPT wrote from its transcript. Lines starting with Q1., Q2., … become questions with their answers. Reorder, edit, or add questions any time.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

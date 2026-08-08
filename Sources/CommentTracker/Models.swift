@@ -769,6 +769,7 @@ struct WeekCard: Identifiable, Equatable {
 struct AudioNote: Identifiable, Equatable {
     let id: Int
     var title: String
+    var notes: String
     var filename: String
     var duration: Double
     var createdAt: Date
@@ -1104,6 +1105,26 @@ struct TreeNode: Identifiable, Equatable {
     var updatedAt: Date
 }
 
+// MARK: - FAQ
+
+struct Faq: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var youtubeURL: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct FaqEntry: Identifiable, Equatable {
+    let id: Int
+    var faqId: Int
+    var question: String
+    var answer: String
+    var position: Int
+    var createdAt: Date
+}
+
 // MARK: - Family
 
 struct FamilyMember: Identifiable, Equatable {
@@ -1138,6 +1159,13 @@ struct FamilyMember: Identifiable, Equatable {
         }
         return cal.dateComponents([.day], from: today, to: nextDate).day
     }
+}
+
+struct FamilyComment: Identifiable, Equatable {
+    let id: Int
+    var memberId: Int
+    var body: String
+    var createdAt: Date
 }
 
 // MARK: - Follow-ups

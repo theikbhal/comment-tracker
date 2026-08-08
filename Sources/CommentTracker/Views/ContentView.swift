@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, wins, fails, notes, links, cards, pomodoro, deepwork, sprints, voice, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -41,6 +41,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .reddit: return "Reddit"
         case .events: return "Events"
         case .tree: return "Mini Tree"
+        case .faq: return "FAQ"
         case .wins: return "Wins"
         case .fails: return "Fails"
         case .notes: return "Notes"
@@ -49,6 +50,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .pomodoro: return "Pomodoro"
         case .deepwork: return "Deep Work"
         case .sprints: return "Sprints"
+        case .voice: return "Voice Notes"
         case .history: return "History"
         case .help: return "Help"
         }
@@ -91,6 +93,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .reddit: return "bubble.left.and.bubble.right.fill"
         case .events: return "calendar.badge.clock"
         case .tree: return "tree"
+        case .faq: return "questionmark.circle.fill"
         case .wins: return "party.popper"
         case .fails: return "xmark.seal"
         case .notes: return "note.text"
@@ -99,6 +102,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .pomodoro: return "timer"
         case .deepwork: return "brain.head.profile"
         case .sprints: return "flag"
+        case .voice: return "mic.fill"
         case .history: return "chart.bar.xaxis"
         case .help: return "questionmark.circle"
         }
@@ -199,6 +203,7 @@ struct ContentView: View {
         case .reddit: RedditView()
         case .events: EventsView()
         case .tree: TreeView()
+        case .faq: FaqView()
         case .wins: WinsView()
         case .fails: FailsView()
         case .notes: InterstitialNotesView()
@@ -207,6 +212,7 @@ struct ContentView: View {
         case .pomodoro: PomodoroView()
         case .deepwork: DeepWorkView()
         case .sprints: SprintsView()
+        case .voice: VoiceNotesView()
         case .history: HistoryView()
         case .help: HelpView()
         }

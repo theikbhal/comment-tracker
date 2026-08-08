@@ -63,6 +63,7 @@ final class Store: ObservableObject {
     @Published var pendingItems: [PendingItem] = []
     @Published var dietEntries: [DietEntry] = []
     @Published var familyMembers: [FamilyMember] = []
+    @Published var familyComments: [FamilyComment] = []
     @Published var followUps: [FollowUp] = []
     @Published var inspirations: [Inspiration] = []
     @Published var airtables: [Airtable] = []
@@ -77,6 +78,8 @@ final class Store: ObservableObject {
     @Published var events: [EventShow] = []
     @Published var eventEpisodes: [EventEpisode] = []
     @Published var treeNodes: [TreeNode] = []
+    @Published var faqs: [Faq] = []
+    @Published var faqEntries: [FaqEntry] = []
 
     @Published var links: [LinkItem] = []
     @Published var cards: [WordCard] = []
@@ -111,8 +114,16 @@ final class Store: ObservableObject {
     private var audioPlayer: AVAudioPlayer?
     @Published var nowPlayingEpisodeID: Int?
     @Published var nowPlayingEventID: Int?
+    @Published var nowPlayingAudioNoteID: Int?
     @Published var isPlaying = false
     @Published var audioPlaybackTime: TimeInterval = 0
+
+    // Audio recording (Voice notes)
+    private var audioRecorder: AVAudioRecorder?
+    @Published var isRecordingAudio = false
+    @Published var recordingAudioTime: TimeInterval = 0
+    private var recordingStartedAt: Date?
+    private var currentRecordingFilename: String?
 
     private var timer: Timer?
 
@@ -193,6 +204,7 @@ final class Store: ObservableObject {
         pendingItems = loadPendingItems()
         dietEntries = loadDietEntries()
         familyMembers = loadFamilyMembers()
+        familyComments = loadFamilyComments()
         followUps = loadFollowUps()
         inspirations = loadInspirations()
         airtables = loadAirtables()
@@ -206,6 +218,8 @@ final class Store: ObservableObject {
         events = loadEvents()
         eventEpisodes = loadEventEpisodes()
         treeNodes = loadTreeNodes()
+        faqs = loadFaqs()
+        faqEntries = loadFaqEntries()
         roadmap = loadRoadmap()
         links = loadLinks()
         cards = loadCards()
@@ -1699,6 +1713,9 @@ final class Store: ObservableObject {
                 handlePlaybackFinished()
             }
         }
+        if isRecordingAudio, let start = recordingStartedAt {
+            recordingAudioTime = Date().timeIntervalSince(start)
+        }
     }
 
     private func completePomodoro() {
@@ -2780,6 +2797,7 @@ final class Store: ObservableObject {
             return AudioNote(
                 id: id,
                 title: title,
+                notes: row["notes"] as? String ?? "",
                 filename: filename,
                 duration: row["duration"] as? Double ?? 0,
                 createdAt: Date(timeIntervalSince1970: created),
@@ -2789,41 +2807,131 @@ final class Store: ObservableObject {
     }
 
     func audioNote(_ n: AudioNote, matches query: String) -> Bool {
-        guard !query.isEmpty else { return true }
-        return n.title.lowercased().contains(query.lowercased())
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if n.title.lowercased().contains(q) { return true }
+        return n.notes.lowercased().contains(q)
     }
 
-    func addAudioNote(title: String, filename: String, duration: Double) -> Int? {
+    func addAudioNote(title: String, notes: String = "", filename: String, duration: Double) -> Int? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let now = Date().timeIntervalSince1970
         _ = db.execute(
-            "INSERT INTO audio_notes (title, filename, duration, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            [trimmed.isEmpty ? "Untitled note" : trimmed, filename, duration, now, now]
+            "INSERT INTO audio_notes (title, notes, filename, duration, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed.isEmpty ? "Untitled note" : trimmed, notes, filename, duration, now, now]
         )
         let id = db.lastInsertID()
         refresh()
         return id
     }
 
-    func renameAudioNote(id: Int, title: String) {
+    func updateAudioNote(id: Int, title: String, notes: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         _ = db.execute(
-            "UPDATE audio_notes SET title = ?, updated_at = ? WHERE id = ?",
-            [trimmed, Date().timeIntervalSince1970, id]
+            "UPDATE audio_notes SET title = ?, notes = ?, updated_at = ? WHERE id = ?",
+            [trimmed, notes, Date().timeIntervalSince1970, id]
         )
         if let index = audioNotes.firstIndex(where: { $0.id == id }) {
             audioNotes[index].title = trimmed
+            audioNotes[index].notes = notes
             audioNotes[index].updatedAt = Date()
         }
     }
 
     func deleteAudioNote(_ id: Int) {
         guard let note = audioNotes.first(where: { $0.id == id }) else { return }
+        if nowPlayingAudioNoteID == id {
+            stopAudioNotePlayback()
+        }
         let file = audioDirectoryURL.appendingPathComponent(note.filename)
         try? FileManager.default.removeItem(at: file)
         _ = db.execute("DELETE FROM audio_notes WHERE id = ?", [id])
         refresh()
+    }
+
+    // MARK: Audio note playback & recording
+
+    func playAudioNote(id: Int) {
+        guard let note = audioNotes.first(where: { $0.id == id }) else { return }
+        let file = audioDirectoryURL.appendingPathComponent(note.filename)
+        guard let player = try? AVAudioPlayer(contentsOf: file) else { return }
+        stopPlayback()
+        audioPlayer = player
+        audioPlayer?.play()
+        nowPlayingAudioNoteID = id
+        isPlaying = true
+        audioPlaybackTime = 0
+    }
+
+    func toggleAudioNotePlayback(id: Int) {
+        if nowPlayingAudioNoteID == id {
+            togglePlayback()
+        } else {
+            playAudioNote(id: id)
+        }
+    }
+
+    func stopAudioNotePlayback() {
+        stopPlayback()
+        nowPlayingAudioNoteID = nil
+    }
+
+    func startRecordingAudioNote() {
+        stopPlayback()
+        if audioRecorder?.isRecording == true {
+            return
+        }
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 44100,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
+        let filename = "note-\(UUID().uuidString).m4a"
+        let url = audioDirectoryURL.appendingPathComponent(filename)
+        guard let recorder = try? AVAudioRecorder(url: url, settings: settings) else { return }
+        recorder.record()
+        audioRecorder = recorder
+        currentRecordingFilename = filename
+        recordingStartedAt = Date()
+        recordingAudioTime = 0
+        isRecordingAudio = true
+    }
+
+    @discardableResult
+    func stopRecordingAudioNote() -> Int? {
+        guard let recorder = audioRecorder else { return nil }
+        recorder.stop()
+        audioRecorder = nil
+        isRecordingAudio = false
+        recordingStartedAt = nil
+        recordingAudioTime = 0
+        let duration = recorder.currentTime
+        let filename = currentRecordingFilename ?? ""
+        currentRecordingFilename = nil
+        let url = audioDirectoryURL.appendingPathComponent(filename)
+        if filename.isEmpty || duration < 1 {
+            try? FileManager.default.removeItem(at: url)
+            return nil
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, h:mm a"
+        return addAudioNote(title: "Voice note — \(formatter.string(from: Date()))", notes: "", filename: filename, duration: duration)
+    }
+
+    func cancelRecordingAudioNote() {
+        guard audioRecorder?.isRecording == true else { return }
+        audioRecorder?.stop()
+        audioRecorder = nil
+        isRecordingAudio = false
+        recordingStartedAt = nil
+        recordingAudioTime = 0
+        if let filename = currentRecordingFilename {
+            let url = audioDirectoryURL.appendingPathComponent(filename)
+            try? FileManager.default.removeItem(at: url)
+        }
+        currentRecordingFilename = nil
     }
 
     // MARK: - Challenges
@@ -3591,6 +3699,44 @@ final class Store: ObservableObject {
         familyMembers.sorted { $0.position < $1.position }
     }
 
+    func familyComments(for memberID: Int) -> [FamilyComment] {
+        familyComments
+            .filter { $0.memberId == memberID }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addFamilyComment(memberID: Int, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "INSERT INTO family_comments (member_id, body, created_at) VALUES (?, ?, ?)",
+            [memberID, trimmed, Date().timeIntervalSince1970]
+        )
+        refresh()
+    }
+
+    func deleteFamilyComment(_ id: Int) {
+        _ = db.execute("DELETE FROM family_comments WHERE id = ?", [id])
+        refresh()
+    }
+
+    private func loadFamilyComments() -> [FamilyComment] {
+        db.query("SELECT * FROM family_comments ORDER BY created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let memberID = row["member_id"] as? Int,
+                let body = row["body"] as? String,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return FamilyComment(
+                id: id,
+                memberId: memberID,
+                body: body,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
     private func loadFamilyMembers() -> [FamilyMember] {
         db.query("SELECT * FROM family_members ORDER BY position ASC, created_at ASC").compactMap { row in
             guard
@@ -3659,6 +3805,7 @@ final class Store: ObservableObject {
     }
 
     func deleteFamilyMember(_ id: Int) {
+        _ = db.execute("DELETE FROM family_comments WHERE member_id = ?", [id])
         _ = db.execute("DELETE FROM family_members WHERE id = ?", [id])
         refresh()
     }
@@ -4441,6 +4588,7 @@ final class Store: ObservableObject {
         audioPlaybackTime = audioPlayer?.duration ?? 0
         isPlaying = false
         audioPlayer = nil
+        nowPlayingAudioNoteID = nil
     }
 
     func togglePlayback() {
@@ -4464,6 +4612,7 @@ final class Store: ObservableObject {
         audioPlayer = nil
         nowPlayingEpisodeID = nil
         nowPlayingEventID = nil
+        nowPlayingAudioNoteID = nil
         isPlaying = false
         audioPlaybackTime = 0
     }
@@ -4570,6 +4719,171 @@ final class Store: ObservableObject {
             _ = db.execute("DELETE FROM tree_nodes WHERE id = ?", [nodeID])
         }
         refresh()
+    }
+
+    // MARK: - FAQ
+
+    private func loadFaqs() -> [Faq] {
+        db.query("SELECT * FROM faqs ORDER BY position ASC, created_at DESC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let youtube = row["youtube_url"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double,
+                let updated = row["updated_at"] as? Double
+            else { return nil }
+            return Faq(
+                id: id,
+                title: title,
+                youtubeURL: youtube,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: updated)
+            )
+        }
+    }
+
+    private func loadFaqEntries() -> [FaqEntry] {
+        db.query("SELECT * FROM faq_entries ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let faqID = row["faq_id"] as? Int,
+                let question = row["question"] as? String,
+                let answer = row["answer"] as? String,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return FaqEntry(
+                id: id,
+                faqId: faqID,
+                question: question,
+                answer: answer,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    func faq(_ f: Faq, matches query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        return f.title.lowercased().contains(q)
+    }
+
+    func faqEntries(for faqID: Int) -> [FaqEntry] {
+        faqEntries.filter { $0.faqId == faqID }
+    }
+
+    @discardableResult
+    func addFaq(title: String, youtubeURL: String, pastedFAQ: String) -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO faqs (title, youtube_url, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            [trimmed, youtubeURL, faqs.count, now, now]
+        )
+        let id = db.lastInsertID()
+        let entries = parseFaqText(pastedFAQ)
+        for (index, pair) in entries.enumerated() {
+            _ = db.execute(
+                "INSERT INTO faq_entries (faq_id, question, answer, position, created_at) VALUES (?, ?, ?, ?, ?)",
+                [id, pair.question, pair.answer, index, now]
+            )
+        }
+        refresh()
+        return id
+    }
+
+    func updateFaq(id: Int, title: String, youtubeURL: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE faqs SET title = ?, youtube_url = ?, updated_at = ? WHERE id = ?",
+            [trimmed, youtubeURL, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveFaq(id: Int, direction: Int) {
+        guard let index = faqs.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < faqs.count else { return }
+        let other = faqs[target]
+        _ = db.execute("UPDATE faqs SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE faqs SET position = ?, updated_at = ? WHERE id = ?", [faqs[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteFaq(_ id: Int) {
+        _ = db.execute("DELETE FROM faqs WHERE id = ?", [id])
+        _ = db.execute("DELETE FROM faq_entries WHERE faq_id = ?", [id])
+        refresh()
+    }
+
+    @discardableResult
+    func addFaqEntry(faqID: Int, question: String, answer: String) -> Int? {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let entries = faqEntries(for: faqID)
+        _ = db.execute(
+            "INSERT INTO faq_entries (faq_id, question, answer, position, created_at) VALUES (?, ?, ?, ?, ?)",
+            [faqID, trimmed, answer, entries.count, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateFaqEntry(id: Int, question: String, answer: String) {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE faq_entries SET question = ?, answer = ? WHERE id = ?",
+            [trimmed, answer, id]
+        )
+        refresh()
+    }
+
+    func moveFaqEntry(id: Int, faqID: Int, direction: Int) {
+        let entries = faqEntries(for: faqID)
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < entries.count else { return }
+        let other = entries[target]
+        _ = db.execute("UPDATE faq_entries SET position = ? WHERE id = ?", [other.position, id])
+        _ = db.execute("UPDATE faq_entries SET position = ? WHERE id = ?", [entries[index].position, other.id])
+        refresh()
+    }
+
+    func deleteFaqEntry(_ id: Int) {
+        _ = db.execute("DELETE FROM faq_entries WHERE id = ?", [id])
+        refresh()
+    }
+
+    func parseFaqText(_ text: String) -> [(question: String, answer: String)] {
+        let lines = text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let regex = try? NSRegularExpression(pattern: "^Q\\s*\\d+[\\.\\):]\\s*") else { return [] }
+        var result: [(question: String, answer: String)] = []
+        var currentQuestion: String?
+        var currentAnswer: [String] = []
+        for line in lines {
+            if let match = regex.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) {
+                if let question = currentQuestion {
+                    result.append((question, currentAnswer.joined(separator: "\n")))
+                }
+                guard let range = Range(match.range, in: line) else { continue }
+                currentQuestion = String(line[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+                currentAnswer = []
+            } else if !line.isEmpty {
+                currentAnswer.append(line)
+            }
+        }
+        if let question = currentQuestion {
+            result.append((question, currentAnswer.joined(separator: "\n")))
+        }
+        return result
     }
 
     private func loadChallengeComments() -> [ChallengeComment] {
