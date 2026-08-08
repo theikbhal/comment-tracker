@@ -67,6 +67,7 @@ struct HelpView: View {
                 linksCard
                 cardsCard
                 stacksCard
+                adhdCard
                 pomodoroCard
                 sprintsCard
                 videosCard
@@ -685,6 +686,17 @@ private var cardsCard: some View {
             Label("Stacks — push, pop, and organize", systemImage: "rectangle.stack.fill")
                 .font(.headline)
             Text("Color-coded stacks you can push one-word items onto. Type up to 3 words and hit Enter to push to the top; Pop moves the top item to the built-in Uncategorized stack. Double-click any item to open its detail: description, links, and Trello-style comments with the newest at the top. Add and recolor as many stacks as you like.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .card()
+    }
+
+    private var adhdCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Task Triage — do it, decide, delegate, or delete", systemImage: "wind")
+                .font(.headline)
+            Text("A 4-column board for sorting incoming tasks so you never get stuck deciding what to do next. Add to Do it now or Decide later instantly, then right-click any item to move it between columns, add context in the note field, and reorder within a column. Great as a quick capture catch-all.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

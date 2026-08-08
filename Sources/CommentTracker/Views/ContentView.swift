@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, stacks, pomodoro, deepwork, sprints, voice, history, help
+    case today, bucket, focus, parallel, urgent, holding, projects, longterm, schedule, mindmap, blog, slack, calendar, year, weeks, challenge, roadmap, alarms, tools, dreams, features, table, airtable, pending, diet, family, followup, inspire, tracker, people, thoughts, videos, hosting, reddit, events, tree, faq, celebrations, wins, fails, notes, links, cards, stacks, adhd, pomodoro, deepwork, sprints, voice, history, help
     var id: String { rawValue }
 
     var title: String {
@@ -50,6 +50,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .links: return "Links"
         case .cards: return "313 Cards"
         case .stacks: return "Stacks"
+        case .adhd: return "Task Triage"
         case .pomodoro: return "Pomodoro"
         case .deepwork: return "Deep Work"
         case .sprints: return "Sprints"
@@ -105,6 +106,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .links: return "link"
         case .cards: return "square.grid.3x3"
         case .stacks: return "rectangle.stack.fill"
+        case .adhd: return "wind"
         case .pomodoro: return "timer"
         case .deepwork: return "brain.head.profile"
         case .sprints: return "flag"
@@ -218,6 +220,7 @@ struct ContentView: View {
         case .links: LinksView()
         case .cards: Cards313View()
         case .stacks: StacksView()
+        case .adhd: AdhdView()
         case .pomodoro: PomodoroView()
         case .deepwork: DeepWorkView()
         case .sprints: SprintsView()

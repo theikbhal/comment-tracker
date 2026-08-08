@@ -201,6 +201,10 @@ struct GlobalSearchView: View {
         store.stackItems.filter { store.stackItem($0, matches: query) }
     }
 
+    private var adhdResults: [AdhdTriageItem] {
+        store.adhdTriage.filter { store.adhdTriageItem($0, matches: query) }
+    }
+
     private var sprintResults: [Sprint] {
         store.sprints.filter { store.sprint($0, matches: query) }
     }
@@ -671,6 +675,16 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
+                    if adhdResults.count > 0 {
+                        section("Task Triage", icon: "wind") {
+                            ForEach(adhdResults) { a in
+                                row(icon: a.action.symbol, color: a.action.color, title: a.title, subtitle: "Task Triage · \(a.action.shortLabel)") {
+                                    dismiss()
+                                    onNavigate(.adhd)
+                                }
+                            }
+                        }
+                    }
                     if sprintResults.count > 0 {
                         section("Sprints", icon: "flag") {
                             ForEach(sprintResults) { s in
@@ -691,7 +705,7 @@ struct GlobalSearchView: View {
                             }
                         }
                     }
-                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && stackResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
+                    if trimmedQuery.isEmpty || (navResults.isEmpty && trackerResults.isEmpty && personResults.isEmpty && videoResults.isEmpty && thoughtResults.isEmpty && winResults.isEmpty && failResults.isEmpty && noteResults.isEmpty && buckResults.isEmpty && focusResults.isEmpty && parallelResults.isEmpty && holdingResults.isEmpty && urgentResults.isEmpty && mindMapResults.isEmpty && mindMapNodeResults.isEmpty && blogResults.isEmpty && slackChannelResults.isEmpty && slackMessageResults.isEmpty && calendarResults.isEmpty && yearResults.isEmpty && weekResults.isEmpty && challengeResults.isEmpty && roadmapResults.isEmpty && alarmResults.isEmpty && toolResults.isEmpty && dreamResults.isEmpty && featureResults.isEmpty && tableResults.isEmpty && airtableResults.isEmpty && hostedVideoResults.isEmpty && redditResults.isEmpty && eventResults.isEmpty && treeResults.isEmpty && faqResults.isEmpty && celebrationResults.isEmpty && pendingResults.isEmpty && dietResults.isEmpty && familyResults.isEmpty && followUpResults.isEmpty && inspirationResults.isEmpty && projectResults.isEmpty && longTermResults.isEmpty && deepWorkResults.isEmpty && scheduleResults.isEmpty && cardResults.isEmpty && stackResults.isEmpty && adhdResults.isEmpty && sprintResults.isEmpty && linkResults.isEmpty) {
                         emptyState
                     }
                 }
@@ -779,6 +793,7 @@ struct GlobalSearchView: View {
             "\(inspirationResults.count) inspiration",
             "\(cardResults.count) cards",
             "\(stackResults.count) stack items",
+            "\(adhdResults.count) triage",
             "\(sprintResults.count) sprints"
         ]
         .filter { !$0.hasPrefix("0 ") }

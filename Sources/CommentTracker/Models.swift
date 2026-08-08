@@ -1500,6 +1500,59 @@ struct StackComment: Identifiable, Equatable {
     var createdAt: Date
 }
 
+// MARK: - ADHD Task Triage
+
+enum TriageAction: String, CaseIterable, Identifiable {
+    case doit, decide, delegate, delete
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .doit: return "Do it now"
+        case .decide: return "Decide later"
+        case .delegate: return "Delegate"
+        case .delete: return "Delete / Archive"
+        }
+    }
+
+    var shortLabel: String {
+        switch self {
+        case .doit: return "Do it"
+        case .decide: return "Decide"
+        case .delegate: return "Delegate"
+        case .delete: return "Delete"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .doit: return .red
+        case .decide: return .orange
+        case .delegate: return .blue
+        case .delete: return .gray
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .doit: return "bolt.fill"
+        case .decide: return "hourglass"
+        case .delegate: return "person.2.fill"
+        case .delete: return "trash"
+        }
+    }
+}
+
+struct AdhdTriageItem: Identifiable, Equatable {
+    let id: Int
+    var title: String
+    var note: String
+    var action: TriageAction
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 // MARK: - Pomodoro
 
 enum PomodoroMode: String, CaseIterable, Identifiable {

@@ -2,6 +2,11 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.40.0]
+
+### Added
+- **Task Triage**: a 4-column ADHD-friendly board to sort incoming tasks — Do it now / Decide later / Delegate / Delete. Add items instantly to the first two columns, right-click to move between columns or reorder, and double-click for a full editor with a note field and one-tap column change. Items are searchable from Global Search.
+
 ## [v1.39.1]
 
 ### Fixed

@@ -93,6 +93,7 @@ final class Store: ObservableObject {
     @Published var stacks: [Stack] = []
     @Published var stackItems: [StackItem] = []
     @Published var stackComments: [StackComment] = []
+    @Published var adhdTriage: [AdhdTriageItem] = []
     @Published var pomodoros: [PomodoroSession] = []
     @Published var sprints: [Sprint] = []
     @Published var stories: [Story] = []
@@ -254,6 +255,7 @@ final class Store: ObservableObject {
         stacks = loadStacks()
         stackItems = loadStackItems()
         stackComments = loadStackComments()
+        adhdTriage = loadAdhdTriage()
         pomodoros = loadPomodoros()
         sprints = loadSprints()
         stories = loadStories()
@@ -1981,6 +1983,71 @@ final class Store: ObservableObject {
         refresh()
     }
 
+    // MARK: - ADHD Task Triage
+
+    func triageItems(in action: TriageAction) -> [AdhdTriageItem] {
+        adhdTriage.filter { $0.action == action }.sorted { $0.position < $1.position }
+    }
+
+    func adhdTriageItem(_ item: AdhdTriageItem, matches query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return true }
+        if item.title.lowercased().contains(q) { return true }
+        if item.note.lowercased().contains(q) { return true }
+        return false
+    }
+
+    @discardableResult
+    func addAdhdTriageItem(title: String, action: TriageAction, note: String = "") -> Int? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let count = triageItems(in: action).count
+        let now = Date().timeIntervalSince1970
+        _ = db.execute(
+            "INSERT INTO adhd_triage (title, note, action, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [trimmed, note, action.rawValue, count, now, now]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func updateAdhdTriageItem(id: Int, title: String, note: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = db.execute(
+            "UPDATE adhd_triage SET title = ?, note = ?, updated_at = ? WHERE id = ?",
+            [trimmed, note, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func moveAdhdTriageItem(id: Int, to action: TriageAction) {
+        guard let item = adhdTriage.first(where: { $0.id == id }) else { return }
+        if item.action == action { return }
+        _ = db.execute(
+            "UPDATE adhd_triage SET action = ?, position = ?, updated_at = ? WHERE id = ?",
+            [action.rawValue, triageItems(in: action).count, Date().timeIntervalSince1970, id]
+        )
+        refresh()
+    }
+
+    func reorderAdhdTriageItem(id: Int, in action: TriageAction, direction: Int) {
+        let list = triageItems(in: action)
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < list.count else { return }
+        let other = list[target]
+        _ = db.execute("UPDATE adhd_triage SET position = ?, updated_at = ? WHERE id = ?", [other.position, Date().timeIntervalSince1970, id])
+        _ = db.execute("UPDATE adhd_triage SET position = ?, updated_at = ? WHERE id = ?", [list[index].position, Date().timeIntervalSince1970, other.id])
+        refresh()
+    }
+
+    func deleteAdhdTriageItem(_ id: Int) {
+        _ = db.execute("DELETE FROM adhd_triage WHERE id = ?", [id])
+        refresh()
+    }
+
     // MARK: - Pomodoro
 
     var focusSessionsToday: Int {
@@ -2688,6 +2755,28 @@ final class Store: ObservableObject {
                 itemId: itemID,
                 body: body,
                 createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+        private func loadAdhdTriage() -> [AdhdTriageItem] {
+        db.query("SELECT * FROM adhd_triage ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let title = row["title"] as? String,
+                let actionRaw = row["action"] as? String,
+                let action = TriageAction(rawValue: actionRaw),
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return AdhdTriageItem(
+                id: id,
+                title: title,
+                note: row["note"] as? String ?? "",
+                action: action,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created),
+                updatedAt: Date(timeIntervalSince1970: row["updated_at"] as? Double ?? created)
             )
         }
     }
