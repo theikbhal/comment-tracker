@@ -507,9 +507,21 @@ struct DeepWorkSession: Identifiable, Equatable {
     var startedAt: Date
     var endedAt: Date
     var completed: Bool
+    var note: String
+}
+
+struct DeepWorkTask: Identifiable, Equatable {
+    let id: Int
+    var text: String
+    var done: Bool
+    var position: Int
+    var createdAt: Date
 }
 
 let deepWorkPresets: [Int] = [15, 30, 45, 60, 90, 120]
+
+let deepWorkSoundPresets = ["Glass", "Tink", "Funk", "Ping", "Pop", "Bottle", "Frog", "Hero", "Morse", "Purr", "Sosumi", "Submarine", "Basso", "Blow"]
+let deepWorkSoundDurations = [1, 5, 10, 30, 60]
 
 // MARK: - Weekly Schedule
 

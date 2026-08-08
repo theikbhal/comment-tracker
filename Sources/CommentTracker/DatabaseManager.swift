@@ -148,7 +148,15 @@ final class DatabaseManager {
             minutes INTEGER NOT NULL,
             started_at REAL NOT NULL,
             ended_at REAL NOT NULL,
-            completed INTEGER NOT NULL DEFAULT 0
+            completed INTEGER NOT NULL DEFAULT 0,
+            note TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS deepwork_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS schedule (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -614,6 +622,7 @@ final class DatabaseManager {
         ensureColumn(table: "calendar_events", column: "reminder", definition: "INTEGER NOT NULL DEFAULT 0")
         ensureColumn(table: "interstitial_notes", column: "bookmarked", definition: "INTEGER NOT NULL DEFAULT 0")
         ensureColumn(table: "audio_notes", column: "notes", definition: "TEXT NOT NULL DEFAULT ''")
+        ensureColumn(table: "deepwork_sessions", column: "note", definition: "TEXT NOT NULL DEFAULT ''")
     }
 
     private func ensureColumn(table: String, column: String, definition: String) {

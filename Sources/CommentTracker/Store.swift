@@ -110,6 +110,15 @@ final class Store: ObservableObject {
     @Published var deepWorkSecondsLeft = 0
     @Published var deepWorkSelectedMinutes = 60
     @Published var deepWorkRunningSince = Date()
+    @Published var deepWorkSessionNote = ""
+    @Published var deepWorkTasks: [DeepWorkTask] = []
+
+    // Deep work sound settings
+    @Published var deepWorkSoundPreset = "Glass"
+    @Published var deepWorkSoundCustomPath: String?
+    @Published var deepWorkSoundDuration = 5
+    private var deepWorkSound: NSSound?
+    private var deepWorkSoundStopTask: Task<Void, Never>?
 
     // Floating timer window
     @Published var showFloatingTimer = false
@@ -132,6 +141,7 @@ final class Store: ObservableObject {
     private var timer: Timer?
 
     init() {
+        loadDeepWorkPrefs()
         load()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -182,6 +192,7 @@ final class Store: ObservableObject {
         parallel = loadParallel()
         projects = loadProjects()
         deepWork = loadDeepWork()
+        deepWorkTasks = loadDeepWorkTasks()
         schedule = loadSchedule()
         holding = loadHolding()
         urgent = loadUrgent()
@@ -898,11 +909,17 @@ final class Store: ObservableObject {
     }
 
     func completeDeepWork(minutes: Int) {
+        completeDeepWork(minutes: minutes, note: deepWorkSessionNote)
+    }
+
+    func completeDeepWork(minutes: Int, note: String) {
         let now = Date().timeIntervalSince1970
         _ = db.execute(
-            "INSERT INTO deepwork_sessions (minutes, started_at, ended_at, completed) VALUES (?, ?, ?, 1)",
-            [minutes, now - Double(minutes) * 60, now]
+            "INSERT INTO deepwork_sessions (minutes, started_at, ended_at, completed, note) VALUES (?, ?, ?, 1, ?)",
+            [minutes, now - Double(minutes) * 60, now, note]
         )
+        deepWorkSessionNote = ""
+        UserDefaults.standard.set("", forKey: "deepWorkSessionNote")
         refresh()
         addWin(text: "Completed a \(minutes)-minute deep work block")
     }
@@ -1748,7 +1765,7 @@ final class Store: ObservableObject {
 
     private func completeDeepWorkTimer() {
         deepWorkRunning = false
-        playPomodoroSound()
+        playDeepWorkSound()
         let finished = deepWorkSelectedMinutes
         completeDeepWork(minutes: finished)
         sendTimerNotification(title: "Deep work complete!", body: "You finished a \(finished)-minute deep work block.")
@@ -2446,9 +2463,127 @@ final class Store: ObservableObject {
                 minutes: minutes,
                 startedAt: Date(timeIntervalSince1970: started),
                 endedAt: Date(timeIntervalSince1970: ended),
-                completed: completed == 1
+                completed: completed == 1,
+                note: row["note"] as? String ?? ""
             )
         }
+    }
+
+    private func loadDeepWorkTasks() -> [DeepWorkTask] {
+        db.query("SELECT * FROM deepwork_tasks ORDER BY position ASC, created_at ASC").compactMap { row in
+            guard
+                let id = row["id"] as? Int,
+                let text = row["text"] as? String,
+                let done = row["done"] as? Int,
+                let position = row["position"] as? Int,
+                let created = row["created_at"] as? Double
+            else { return nil }
+            return DeepWorkTask(
+                id: id,
+                text: text,
+                done: done == 1,
+                position: position,
+                createdAt: Date(timeIntervalSince1970: created)
+            )
+        }
+    }
+
+    @discardableResult
+    func addDeepWorkTask(text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        _ = db.execute(
+            "INSERT INTO deepwork_tasks (text, done, position, created_at) VALUES (?, 0, ?, ?)",
+            [trimmed, deepWorkTasks.count, Date().timeIntervalSince1970]
+        )
+        let id = db.lastInsertID()
+        refresh()
+        return id
+    }
+
+    func toggleDeepWorkTask(id: Int) {
+        guard let task = deepWorkTasks.first(where: { $0.id == id }) else { return }
+        _ = db.execute("UPDATE deepwork_tasks SET done = ? WHERE id = ?", [task.done ? 0 : 1, id])
+        refresh()
+    }
+
+    func deleteDeepWorkTask(_ id: Int) {
+        _ = db.execute("DELETE FROM deepwork_tasks WHERE id = ?", [id])
+        refresh()
+    }
+
+    func moveDeepWorkTask(id: Int, direction: Int) {
+        let sorted = deepWorkTasks.sorted { $0.position < $1.position }
+        guard let index = sorted.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + direction
+        guard target >= 0, target < sorted.count else { return }
+        let other = sorted[target]
+        _ = db.execute("UPDATE deepwork_tasks SET position = ? WHERE id = ?", [other.position, id])
+        _ = db.execute("UPDATE deepwork_tasks SET position = ? WHERE id = ?", [sorted[index].position, other.id])
+        refresh()
+    }
+
+    // MARK: Deep work sound preferences
+
+    func loadDeepWorkPrefs() {
+        deepWorkSoundPreset = UserDefaults.standard.string(forKey: "deepWorkSoundPreset") ?? "Glass"
+        deepWorkSoundCustomPath = UserDefaults.standard.string(forKey: "deepWorkSoundCustomPath")
+        let duration = UserDefaults.standard.integer(forKey: "deepWorkSoundDuration")
+        deepWorkSoundDuration = duration > 0 ? duration : 5
+        deepWorkSessionNote = UserDefaults.standard.string(forKey: "deepWorkSessionNote") ?? ""
+    }
+
+    func setDeepWorkSoundPreset(_ preset: String) {
+        deepWorkSoundPreset = preset
+        UserDefaults.standard.set(preset, forKey: "deepWorkSoundPreset")
+    }
+
+    func setDeepWorkSoundCustomPath(_ path: String?) {
+        deepWorkSoundCustomPath = path
+        UserDefaults.standard.set(path ?? "", forKey: "deepWorkSoundCustomPath")
+    }
+
+    func setDeepWorkSoundDuration(_ duration: Int) {
+        deepWorkSoundDuration = duration
+        UserDefaults.standard.set(duration, forKey: "deepWorkSoundDuration")
+    }
+
+    func setDeepWorkSessionNote(_ note: String) {
+        deepWorkSessionNote = note
+        UserDefaults.standard.set(note, forKey: "deepWorkSessionNote")
+    }
+
+    func playDeepWorkSound() {
+        stopDeepWorkSound()
+        guard let sound = makeDeepWorkSound() else {
+            NSSound.beep()
+            return
+        }
+        sound.loops = true
+        sound.play()
+        deepWorkSound = sound
+        let seconds = max(1, deepWorkSoundDuration)
+        deepWorkSoundStopTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+            self?.stopDeepWorkSound()
+        }
+    }
+
+    func stopDeepWorkSound() {
+        deepWorkSoundStopTask?.cancel()
+        deepWorkSoundStopTask = nil
+        deepWorkSound?.stop()
+        deepWorkSound = nil
+    }
+
+    private func makeDeepWorkSound() -> NSSound? {
+        if deepWorkSoundPreset == "custom", let path = deepWorkSoundCustomPath, !path.isEmpty {
+            let url = path.hasPrefix("/") ? URL(fileURLWithPath: path) : URL(string: path)
+            if let url {
+                return NSSound(contentsOf: url, byReference: true)
+            }
+        }
+        return NSSound(named: NSSound.Name(deepWorkSoundPreset)) ?? NSSound(named: "Glass")
     }
 
     private func loadSchedule() -> [ScheduleEntry] {

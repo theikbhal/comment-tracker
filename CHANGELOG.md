@@ -2,6 +2,13 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.34.0]
+
+### Added
+- **Deep Work sound settings**: pick from preset alarm sounds (Glass, Tink, Funk, Ping, …) or choose your own sound file, set how long the alarm rings (1–60s), and test it anytime. The completion alarm now uses these settings.
+- **Deep Work note**: add a note for each block — it's saved with the session and shown in history.
+- **Deep Work task list**: add, check off, reorder, and delete tasks for your block, with a done counter.
+
 ## [v1.33.0]
 
 ### Added
