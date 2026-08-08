@@ -1731,7 +1731,7 @@ final class Store: ObservableObject {
             endPomodoro(id: sessionID)
         }
         refresh()
-        NSSound(named: "Glass")?.play()
+        playPomodoroSound()
         pomodoroRunning = false
         pomodoroEndTime = nil
         let finishedMode = pomodoroMode
@@ -1748,11 +1748,23 @@ final class Store: ObservableObject {
 
     private func completeDeepWorkTimer() {
         deepWorkRunning = false
-        NSSound(named: "Glass")?.play()
+        playPomodoroSound()
         let finished = deepWorkSelectedMinutes
         completeDeepWork(minutes: finished)
         sendTimerNotification(title: "Deep work complete!", body: "You finished a \(finished)-minute deep work block.")
         deepWorkSecondsLeft = 0
+    }
+
+    func playPomodoroSound() {
+        if let sound = NSSound(named: "Glass") {
+            sound.play()
+            return
+        }
+        if let sound = NSSound(named: "Tink") {
+            sound.play()
+            return
+        }
+        NSSound.beep()
     }
 
     func sendTimerNotification(title: String, body: String) {

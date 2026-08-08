@@ -84,6 +84,13 @@ struct PomodoroView: View {
             }
             Spacer()
             Button {
+                store.playPomodoroSound()
+            } label: {
+                Label("Test sound", systemImage: "speaker.wave.2")
+            }
+            .buttonStyle(.bordered)
+            .help("Play the completion sound")
+            Button {
                 store.showFloatingTimer = true
                 FloatingTimerWindow.shared.show(store: store)
             } label: {

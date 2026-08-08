@@ -2,6 +2,12 @@
 
 All notable changes to Comment Tracker, newest first.
 
+## [v1.33.0]
+
+### Added
+- **Pomodoro test sound**: a "Test sound" button in the Pomodoro header plays the completion sound on demand.
+- **Fixed**: the completion sound now always plays — it falls back to another system sound (or a beep) if "Glass" isn't available on your macOS.
+
 ## [v1.32.0]
 
 ### Added
